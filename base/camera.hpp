@@ -15,6 +15,10 @@ private:
     float znear{ 0.11f }, zfar{ 512.0f };
     float aspect{ 1.0f };
 
+
+
+	glm::mat4 vulkanCorrection = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, .5, 0), glm::vec4(0, 0, .5, 1));
+
     void updateViewMatrix() {
         // Constrain pitch to ~-PI/2 to ~PI/2
         if (abs(yawPitch.y) > MAX_PITCH) {
@@ -65,7 +69,7 @@ public:
     } keys;
 
     Camera() {
-        matrices.perspective = glm::perspective(glm::radians(fov), aspect, znear, zfar);
+        matrices.perspective = vulkanCorrection*glm::perspective(glm::radians(fov), aspect, znear, zfar);
     }
 
     bool moving() {
@@ -74,7 +78,7 @@ public:
 
     void setFieldOfView(float fov) {
         this->fov = fov;
-        matrices.perspective = glm::perspective(glm::radians(fov), aspect, znear, zfar);
+        matrices.perspective = vulkanCorrection*glm::perspective(glm::radians(fov), aspect, znear, zfar);
     }
 
     void setAspectRatio(const glm::vec2& size) {
@@ -87,7 +91,7 @@ public:
 
     void setAspectRatio(float aspect) {
         this->aspect = aspect;
-        matrices.perspective = glm::perspective(glm::radians(fov), aspect, znear, zfar);
+        matrices.perspective = vulkanCorrection* glm::perspective(glm::radians(fov), aspect, znear, zfar);
     }
 
     void setPerspective(float fov, const glm::vec2& size, float znear = 0.1f, float zfar = 512.0f) {
@@ -103,7 +107,7 @@ public:
         this->fov = fov;
         this->znear = znear;
         this->zfar = zfar;
-        matrices.perspective = glm::perspective(glm::radians(fov), aspect, znear, zfar);
+        matrices.perspective = vulkanCorrection * glm::perspective(glm::radians(fov), aspect, znear, zfar);
     };
 
     void setRotation(const glm::vec3& rotation) {
@@ -154,7 +158,8 @@ public:
     void keyReleased(uint32_t key, uint32_t mods) {
     }
 
-    void update(float deltaTime) {
+    void update(float deltaTime) { 
+		std::cout << "!" << std::endl;
         if (type == CameraType::firstperson) {
             if (moving()) {
                 glm::vec3 camFront = orientation * glm::vec3{ 0, 0, 1 };

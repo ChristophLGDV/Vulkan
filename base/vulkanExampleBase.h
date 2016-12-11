@@ -534,9 +534,11 @@ namespace vkx {
                 }
                 break;
 
-            case GLFW_KEY_ESCAPE:
-                glfwSetWindowShouldClose(window, 1);
-                break;
+			case GLFW_KEY_ESCAPE:
+				glfwSetWindowShouldClose(window, 1);
+				break;
+
+				 
 
             default:
                 break;
@@ -549,12 +551,14 @@ namespace vkx {
             if (deltaPos.x == 0 && deltaPos.y == 0) {
                 return;
             }
-            if (GLFW_PRESS == glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)) {
+            if (GLFW_PRESS == glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)) 
+			{
                 camera.dolly((deltaPos.y) * .005f * zoomSpeed);
                 viewChanged();
             }
-            if (GLFW_PRESS == glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)) {
-                camera.rotate(vec2(deltaPos.x, -deltaPos.y) * 0.02f * rotationSpeed);
+           // if (GLFW_PRESS == glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)) 
+			{
+                camera.rotate(vec2(-deltaPos.x, deltaPos.y) * 0.02f * rotationSpeed);
                 viewChanged();
             }
             if (GLFW_PRESS == glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE)) {

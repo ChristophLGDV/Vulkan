@@ -141,36 +141,38 @@ private:
         std::vector<vk::DescriptorSetLayoutBinding> setLayoutBindings;
         vk::DescriptorSetLayoutCreateInfo descriptorLayout;
 
-        // Set 0: Scene matrices
-        setLayoutBindings.push_back(vkx::descriptorSetLayoutBinding(
-            vk::DescriptorType::eUniformBuffer,
-            vk::ShaderStageFlagBits::eVertex,
-            0));
+		{
+			// Set 0: Scene matrices			
+			setLayoutBindings.push_back(vk::DescriptorSetLayoutBinding(0,
+				vk::DescriptorType::eUniformBuffer,
+				1,
+				vk::ShaderStageFlagBits::eVertex, nullptr));
 
-		setLayoutBindings.push_back(vk::DescriptorSetLayoutBinding(0,
-			vk::DescriptorType::eUniformBuffer,
-			1, 
-			vk::ShaderStageFlagBits::eVertex,nullptr));
+			descriptorLayout = vk::DescriptorSetLayoutCreateInfo(vk::DescriptorSetLayoutCreateFlags(),
+				static_cast<uint32_t>(setLayoutBindings.size()),
+				setLayoutBindings.data());
 
-        descriptorLayout = vkx::descriptorSetLayoutCreateInfo(
-            setLayoutBindings.data(),
-            static_cast<uint32_t>(setLayoutBindings.size()));
-        descriptorSetLayouts.scene = device.createDescriptorSetLayout(descriptorLayout);
+			descriptorSetLayouts.scene = device.createDescriptorSetLayout(descriptorLayout);
+		}
+		{
+			// Set 1: Material data
+			setLayoutBindings.clear();
+			setLayoutBindings.push_back(vk::DescriptorSetLayoutBinding(0,
+				vk::DescriptorType::eCombinedImageSampler,
+				1,
+				vk::ShaderStageFlagBits::eFragment,
+				nullptr));
 
-        // Set 1: Material data
-        setLayoutBindings.clear();
-        setLayoutBindings.push_back(vkx::descriptorSetLayoutBinding(
-            vk::DescriptorType::eCombinedImageSampler,
-            vk::ShaderStageFlagBits::eFragment,
-            0));
-        descriptorSetLayouts.material = device.createDescriptorSetLayout(descriptorLayout);
+			
 
+			descriptorSetLayouts.material = device.createDescriptorSetLayout(descriptorLayout);
+		}
         // Setup pipeline layout
         std::array<vk::DescriptorSetLayout, 2> setLayouts = { descriptorSetLayouts.scene, descriptorSetLayouts.material };
-        vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo = vkx::pipelineLayoutCreateInfo(setLayouts.data(), static_cast<uint32_t>(setLayouts.size()));
+        vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo = vk::PipelineLayoutCreateInfo(vk::PipelineLayoutCreateFlags(), static_cast<uint32_t>(setLayouts.size()),setLayouts.data());
 
         // We will be using a push constant block to pass material properties to the fragment shaders
-        vk::PushConstantRange pushConstantRange = vkx::pushConstantRange(
+        vk::PushConstantRange pushConstantRange(
             vk::ShaderStageFlagBits::eFragment,
             sizeof(SceneMaterialProperites),
             0);
@@ -182,16 +184,14 @@ private:
         // Material descriptor sets
         for (size_t i = 0; i < materials.size(); i++) {
             // Descriptor set
-            vk::DescriptorSetAllocateInfo allocInfo =
-                vkx::descriptorSetAllocateInfo(
+            vk::DescriptorSetAllocateInfo allocInfo(
                     descriptorPool,
-                    &descriptorSetLayouts.material,
-                    1);
+					1,
+                    &descriptorSetLayouts.material);
 
             materials[i].descriptorSet = device.allocateDescriptorSets(allocInfo)[0];
 
-            vk::DescriptorImageInfo texDescriptor =
-                vkx::descriptorImageInfo(
+            vk::DescriptorImageInfo texDescriptor(
                     materials[i].diffuse.sampler,
                     materials[i].diffuse.view,
                     vk::ImageLayout::eGeneral);
@@ -201,30 +201,39 @@ private:
             // todo : only use image sampler descriptor set and use one scene ubo for matrices
 
             // Binding 0: Diffuse texture
-            writeDescriptorSets.push_back(vkx::writeDescriptorSet(
+            writeDescriptorSets.push_back(vk::WriteDescriptorSet(
                 materials[i].descriptorSet,
+				0,
+				0,
+				1,
                 vk::DescriptorType::eCombinedImageSampler,
-                0,
-                &texDescriptor));
+				&texDescriptor,
+				nullptr, 
+				nullptr 
+               ));
 
             device.updateDescriptorSets(writeDescriptorSets, {});
         }
 
         // Scene descriptor set
         vk::DescriptorSetAllocateInfo allocInfo =
-            vkx::descriptorSetAllocateInfo(
+            vk::DescriptorSetAllocateInfo(
                 descriptorPool,
-                &descriptorSetLayouts.scene,
-                1);
+				1,
+                &descriptorSetLayouts.scene);
         descriptorSetScene = device.allocateDescriptorSets(allocInfo)[0];
 
         std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
         // Binding 0 : Vertex shader uniform buffer
-        writeDescriptorSets.push_back(vkx::writeDescriptorSet(
-            descriptorSetScene,
+        writeDescriptorSets.push_back(vk::WriteDescriptorSet(
+			descriptorSetScene,
+			0,
+			0,
+			1,
             vk::DescriptorType::eUniformBuffer,
-            0,
-            &uniformBuffer.descriptor));
+			nullptr,
+            &uniformBuffer.descriptor,
+			nullptr));
 
         device.updateDescriptorSets(writeDescriptorSets, {});
     }
@@ -607,6 +616,8 @@ public:
         if (!prepared)
             return;
         draw();
+		 
+
     }
 
     virtual void viewChanged() {
@@ -640,6 +651,22 @@ public:
             attachLight = !attachLight;
             updateUniformBuffers();
             break;
+
+		case GLFW_KEY_UP:
+			camera.keys.up = true; 
+			break;
+
+		case GLFW_KEY_DOWN:
+			camera.keys.down = true; 
+			break;
+
+		case GLFW_KEY_LEFT:
+			camera.keys.left = true; 
+			break;
+
+		case GLFW_KEY_RIGHT:
+			camera.keys.right = true; ;
+			break;
         }
     }
 
