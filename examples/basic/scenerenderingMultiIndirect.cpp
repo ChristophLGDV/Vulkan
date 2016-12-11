@@ -78,7 +78,8 @@ private:
     void loadMaterials() {
         materials.resize(aScene->mNumMaterials);
 
-        for (size_t i = 0; i < materials.size(); i++) {
+        for (size_t i = 0; i < materials.size(); i++) 
+		{
             materials[i] = {};
 
             aiString name;
@@ -126,13 +127,14 @@ private:
 
         // Descriptor pool
         std::vector<vk::DescriptorPoolSize> poolSizes;
-        poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 1)); //static_cast<uint32_t>(materials.size())
-        poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eCombinedImageSampler, static_cast<uint32_t>(materials.size())));
-		vk::DescriptorPoolCreateInfo descriptorPoolInfo(vk::DescriptorPoolCreateFlags(),
-			static_cast<uint32_t>(materials.size()) + 1,
-			static_cast<uint32_t>(poolSizes.size()),
-			poolSizes.data());
-		 
+        poolSizes.push_back(vkx::descriptorPoolSize(vk::DescriptorType::eUniformBuffer, 1)); //static_cast<uint32_t>(materials.size())
+        poolSizes.push_back(vkx::descriptorPoolSize(vk::DescriptorType::eCombinedImageSampler, static_cast<uint32_t>(materials.size())));
+
+        vk::DescriptorPoolCreateInfo descriptorPoolInfo =
+            vkx::descriptorPoolCreateInfo(
+                static_cast<uint32_t>(poolSizes.size()),
+                poolSizes.data(),
+                static_cast<uint32_t>(materials.size()) + 1);
 
         descriptorPool = device.createDescriptorPool(descriptorPoolInfo);
 
@@ -140,24 +142,26 @@ private:
         std::vector<vk::DescriptorSetLayoutBinding> setLayoutBindings;
         vk::DescriptorSetLayoutCreateInfo descriptorLayout;
 
-        // Set 0: Scene matrices
-        setLayoutBindings.push_back(vkx::descriptorSetLayoutBinding(
-            vk::DescriptorType::eUniformBuffer,
-            vk::ShaderStageFlagBits::eVertex,
-            0));
-        descriptorLayout = vkx::descriptorSetLayoutCreateInfo(
-            setLayoutBindings.data(),
-            static_cast<uint32_t>(setLayoutBindings.size()));
-        descriptorSetLayouts.scene = device.createDescriptorSetLayout(descriptorLayout);
-
-        // Set 1: Material data
-        setLayoutBindings.clear();
-        setLayoutBindings.push_back(vkx::descriptorSetLayoutBinding(
-            vk::DescriptorType::eCombinedImageSampler,
-            vk::ShaderStageFlagBits::eFragment,
-            0));
-        descriptorSetLayouts.material = device.createDescriptorSetLayout(descriptorLayout);
-
+		{
+			// Set 0: Scene matrices
+			setLayoutBindings.push_back(vkx::descriptorSetLayoutBinding(
+				vk::DescriptorType::eUniformBuffer,
+				vk::ShaderStageFlagBits::eVertex,
+				0));
+			descriptorLayout = vkx::descriptorSetLayoutCreateInfo(
+				setLayoutBindings.data(),
+				static_cast<uint32_t>(setLayoutBindings.size()));
+			descriptorSetLayouts.scene = device.createDescriptorSetLayout(descriptorLayout);
+		}
+		{
+			// Set 1: Material data
+			setLayoutBindings.clear();
+			setLayoutBindings.push_back(vkx::descriptorSetLayoutBinding(
+				vk::DescriptorType::eCombinedImageSampler,
+				vk::ShaderStageFlagBits::eFragment,
+				0));
+			descriptorSetLayouts.material = device.createDescriptorSetLayout(descriptorLayout);
+		}
         // Setup pipeline layout
         std::array<vk::DescriptorSetLayout, 2> setLayouts = { descriptorSetLayouts.scene, descriptorSetLayouts.material };
         vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo = vkx::pipelineLayoutCreateInfo(setLayouts.data(), static_cast<uint32_t>(setLayouts.size()));
