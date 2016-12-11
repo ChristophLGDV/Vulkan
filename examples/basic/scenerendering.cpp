@@ -128,6 +128,7 @@ private:
         std::vector<vk::DescriptorPoolSize> poolSizes;
         poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 1)); //static_cast<uint32_t>(materials.size())
         poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eCombinedImageSampler, static_cast<uint32_t>(materials.size())));
+		
 		vk::DescriptorPoolCreateInfo descriptorPoolInfo(vk::DescriptorPoolCreateFlags(),
 			static_cast<uint32_t>(materials.size()) + 1,
 			static_cast<uint32_t>(poolSizes.size()),
@@ -145,6 +146,12 @@ private:
             vk::DescriptorType::eUniformBuffer,
             vk::ShaderStageFlagBits::eVertex,
             0));
+
+		setLayoutBindings.push_back(vk::DescriptorSetLayoutBinding(0,
+			vk::DescriptorType::eUniformBuffer,
+			1, 
+			vk::ShaderStageFlagBits::eVertex,nullptr));
+
         descriptorLayout = vkx::descriptorSetLayoutCreateInfo(
             setLayoutBindings.data(),
             static_cast<uint32_t>(setLayoutBindings.size()));
