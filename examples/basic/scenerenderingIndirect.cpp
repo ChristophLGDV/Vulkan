@@ -786,8 +786,8 @@ public:
 		std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages;
 
 		// Solid rendering pipeline
-		shaderStages[0] = loadShader(getAssetPath() + "shaders/scenerenderingMultiIndirect/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
-		shaderStages[1] = loadShader(getAssetPath() + "shaders/scenerenderingMultiIndirect/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
+		shaderStages[0] = loadShader(getAssetPath() + "shaders/scenerenderingIndirect/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
+		shaderStages[1] = loadShader(getAssetPath() + "shaders/scenerenderingIndirect/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
 
 		vk::GraphicsPipelineCreateInfo pipelineCreateInfo =
 			vkx::pipelineCreateInfo(
