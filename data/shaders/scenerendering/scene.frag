@@ -2,22 +2,32 @@
 
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
- 
+
+//layout (set = 1, binding = 0) uniform sampler2D samplerColorMap;
+
 layout (location = 0) in vec3 inNormal;
 layout (location = 1) in vec3 inColor;
 layout (location = 2) in vec2 inUV;
 layout (location = 3) in vec3 inViewVec;
 layout (location = 4) in vec3 inLightVec;
- 
+
+//layout(push_constant) uniform Material 
+//{
+//	vec4 ambient;
+//	vec4 diffuse;
+//	vec4 specular;
+//	float opacity;
+//} material;
+
 struct SceneMaterialProperites {
-	vec4 ambient;
-	vec3 diffuse;
+	glm::vec4 ambient;
+	glm::vec3 diffuse;
 	float opacity;
-	vec4 specular;
+	glm::vec4 specular;
 };
 
 layout (set = 1,  binding = 0) uniform  MaterialDataBuffer{
-	SceneMaterialProperites material[15];
+	Material material[15];
 };
 layout (set = 1, binding = 1) uniform sampler samplerColorMap;
 
@@ -32,7 +42,7 @@ layout (location = 0) out vec4 outFragColor;
 
 void main() 
 {
-	vec4 color = texture(diffuseTextures[pushConsts.matID] , inUV) * vec4(inColor, 1.0);
+	vec4 color = texture(diffuseTextures[pushConsts.matID], , inUV) * vec4(inColor, 1.0);
 	vec3 N = normalize(inNormal);
 	vec3 L = normalize(inLightVec);
 	vec3 V = normalize(inViewVec);
