@@ -623,6 +623,7 @@ public:
     virtual void viewChanged() {
         updateUniformBuffers();
     }
+	 
 
     void keyPressed(uint32_t keyCode) override {
         Parent::keyPressed(keyCode);
@@ -653,22 +654,23 @@ public:
             break;
 
 		case GLFW_KEY_UP:
-			camera.keys.up = true; 
+			camera.keys.up = true;
 			break;
 
 		case GLFW_KEY_DOWN:
-			camera.keys.down = true; 
+			camera.keys.down = true;
 			break;
 
 		case GLFW_KEY_LEFT:
-			camera.keys.left = true; 
+			camera.keys.left = true;
 			break;
 
 		case GLFW_KEY_RIGHT:
-			camera.keys.right = true; ;
+			camera.keys.right = true;
 			break;
         }
     }
+	 
 
     virtual void getOverlayText(vkx::TextOverlay *textOverlay) {
 #if defined(__ANDROID__)

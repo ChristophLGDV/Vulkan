@@ -20,7 +20,7 @@ const vec3 Vectors::TWO{ 2.0f };
 const vec3 Vectors::HALF{ 0.5f };
 const vec3& Vectors::RIGHT = Vectors::UNIT_X;
 const vec3& Vectors::UP = Vectors::UNIT_Y;
-const vec3& Vectors::FRONT = Vectors::UNIT_NEG_Z;
+const vec3& Vectors::FRONT = Vectors::UNIT_Z;
 
 const quat Rotations::IDENTITY{ 1.0f, 0.0f, 0.0f, 0.0f };
 const quat Rotations::Y_180{ 0.0f, 0.0f, 1.0f, 0.0f };

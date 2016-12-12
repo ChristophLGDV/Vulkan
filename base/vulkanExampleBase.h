@@ -71,7 +71,7 @@ namespace vkx {
         std::string getWindowTitle();
 
     protected:
-        bool enableVsync{ false };
+        bool enableVsync{ true };
         // Command buffers used for rendering
         std::vector<vk::CommandBuffer> primaryCmdBuffers;
         std::vector<vk::CommandBuffer> textCmdBuffers;
@@ -309,6 +309,9 @@ namespace vkx {
             if (updateView) {
                 viewChanged();
             }
+
+			camera.update(deltaTime);
+			viewChanged();
 
         }
 

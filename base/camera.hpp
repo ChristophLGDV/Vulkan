@@ -159,10 +159,10 @@ public:
     }
 
     void update(float deltaTime) { 
-		std::cout << "!" << std::endl;
+		
         if (type == CameraType::firstperson) {
             if (moving()) {
-                glm::vec3 camFront = orientation * glm::vec3{ 0, 0, 1 };
+                glm::vec3 camFront = inverse(orientation) * glm::vec3{ 0, 0, 1 };
                 float moveSpeed = deltaTime * movementSpeed;
 
                 if (keys.up)
@@ -174,6 +174,7 @@ public:
                 if (keys.right)
                     position += glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * moveSpeed;
 
+				keys.up = keys.down = keys.left = keys.right = false;
                 updateViewMatrix();
             }
         }

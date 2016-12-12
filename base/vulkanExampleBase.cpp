@@ -92,7 +92,12 @@ void ExampleBase::run() {
     state->onInputEvent = VulkanExample::handleAppInput;
     androidApp = state;
 #else
-    setupWindow();
+    setupWindow(); 
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+
+
     prepare();
 #endif
 
@@ -437,7 +442,7 @@ void ExampleBase::handleAppCommand(android_app * app, int32_t cmd) {
 
 void ExampleBase::KeyboardHandler(GLFWwindow* window, int key, int scancode, int action, int mods) {
     ExampleBase* example = (ExampleBase*)glfwGetWindowUserPointer(window);
-    if (action == GLFW_PRESS) {
+    if (action == GLFW_PRESS  || action ==  GLFW_REPEAT) {
         example->keyPressed(key);
     }
 }
