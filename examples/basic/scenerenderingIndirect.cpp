@@ -7,6 +7,7 @@
 */
 
 #include "vulkanexamplebase.h"
+																								\
 
 #define VERTEX_BUFFER_BIND_ID 0
 
@@ -192,7 +193,8 @@ private:
 
 		// Descriptor pool
 		std::vector<vk::DescriptorPoolSize> poolSizes;
-		poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 1)); //static_cast<uint32_t>(materials.size())
+		poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 2)); //static_cast<uint32_t>(materials.size())
+		poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eSampler, 1)); //static_cast<uint32_t>(materials.size())
 		poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eCombinedImageSampler, static_cast<uint32_t>(materials.size())));
 
 		vk::DescriptorPoolCreateInfo descriptorPoolInfo(vk::DescriptorPoolCreateFlags(),
@@ -283,7 +285,7 @@ private:
 					descriptorPool,
 					1,
 					&descriptorSetLayouts.material);
-			descriptorSetScene = device.allocateDescriptorSets(allocInfo)[0];
+			descriptorSetMaterial = device.allocateDescriptorSets(allocInfo)[0];
 
 			std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
 
@@ -299,19 +301,19 @@ private:
 				0										// pTexelBufferView;
 			});
 
-			writeDescriptorSets.push_back(vk::WriteDescriptorSet{  		
-				descriptorSetMaterial,					// dstSet;
-				1,										// dstBinding;
-				0, 										// dstArrayElement;
-				1,										// descriptorCount;
-				vk::DescriptorType::eSampler,			// descriptorType;
-				&materials[0].diffuse.descriptor,		// pImageInfo;
-				0, 										// pBufferInfo;
-				0										// pTexelBufferView;
-			});
-
-
-
+				writeDescriptorSets.push_back(vk::WriteDescriptorSet{  		
+					descriptorSetMaterial,					// dstSet;
+					1,										// dstBinding;
+					0, 										// dstArrayElement;
+					1,										// descriptorCount;
+					vk::DescriptorType::eSampler,			// descriptorType;
+					&materials[0].diffuse.descriptor,		// pImageInfo;
+					0, 										// pBufferInfo;
+					0										// pTexelBufferView;
+				});
+			
+			
+			
 			for (size_t i = 0; i < materials.size(); i++) 
 			{
 				writeDescriptorSets.push_back(vk::WriteDescriptorSet{
@@ -434,7 +436,7 @@ private:
 		sceneMesh.vertices = context.stageToDeviceBuffer(vk::BufferUsageFlagBits::eVertexBuffer, allVertices);
 		sceneMesh.indices = context.stageToDeviceBuffer(vk::BufferUsageFlagBits::eIndexBuffer, allIndices);
 
-		indirectDrawCommands = context.stageToDeviceBuffer(vk::BufferUsageFlagBits::eIndirectBuffer, indirectDrawCommands);
+		indirectDrawCommands = context.stageToDeviceBuffer(vk::BufferUsageFlagBits::eIndirectBuffer, indirectDrawCommandsData);
 
 		  
 	 
@@ -549,18 +551,24 @@ public:
 		int vertexOffset = 0;
 
 		bool multiDraw = false;
+		cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, wireframe ? pipelines.wireframe : pipelines.solid);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, descriptorSets, {});
+
+		cmdBuffer.bindVertexBuffers(0, sceneMesh.vertices.buffer, { 0 });
+		cmdBuffer.bindIndexBuffer(sceneMesh.indices.buffer, 0, vk::IndexType::eUint32);
 
 		if (multiDraw)
 		{
 			int i = 0;
 		
-				// Pass material properies via push constants
-				
+				// Pass material properies via push constants	
+
 			cmdBuffer.pushConstants(pipelineLayout,
 				vk::ShaderStageFlagBits::eFragment,
 				0,
 				sizeof(int),
 				&i);
+
 			cmdBuffer.drawIndexedIndirect(
 				indirectDrawCommands.buffer,
 				0,
@@ -568,44 +576,86 @@ public:
 				sizeof(vk::DrawIndexedIndirectCommand)
 			);
 	
-
+			
 		}
 		else
 		{
-			vk::DeviceSize offsets[1] = { 0 };
-			for (size_t i = 0; i < meshes.size(); i++) {
-				if ((renderSingleScenePart) && (i != scenePartIndex))
-					continue;
+			for (int i = 0; i < meshes.size(); i++)
+			{ 
 
-				//if (meshes[i].material->opacity == 0.0f)
-				//	continue;
-
-				// todo : per material pipelines
-				//			vkCmdBindPipeline(cmdBuffer, vk::PipelineBindPoint::eGraphics, *mesh.material->pipeline);
-
-				// We will be using multiple descriptor sets for rendering
-				// In GLSL the selection is done via the set and binding keywords
-				// VS: layout (set = 0, binding = 0) uniform UBO;
-				// FS: layout (set = 1, binding = 0) uniform sampler2D samplerColorMap;
-
-
-				cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, wireframe ? pipelines.wireframe : *meshes[i].material->pipeline);
-				cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, descriptorSets, {});
 
 				// Pass material properies via push constants
-				vkCmdPushConstants(
-					cmdBuffer,
-					pipelineLayout,
-					VK_SHADER_STAGE_FRAGMENT_BIT,
-					0,
-					sizeof(SceneMaterialProperites),
-					&meshes[i].material->properties);
+				cmdBuffer.pushConstants(pipelineLayout,		
+						vk::ShaderStageFlagBits::eFragment,
+						0,
+						sizeof(int),
+						&i);
+				
+				bool drawIndirect = true;
+				if (drawIndirect)
+				{
+					cmdBuffer.drawIndexedIndirect(
+						indirectDrawCommands.buffer,
+						sizeof(vk::DrawIndexedIndirectCommand)*i,
+						1,
+						sizeof(vk::DrawIndexedIndirectCommand)
+					);
+					
+				
+				}
+				//else
+				//{
+				//	//vkCmdDrawIndexed(cmdBuffer, meshes[i].indexCount, 1, firstIndex, vertexOffset, 0);
+				//	vkCmdDrawIndexed(cmdBuffer,
+				//		indirectDrawCommands[i].indexCount,
+				//		indirectDrawCommands[i].instanceCount,
+				//		indirectDrawCommands[i].firstIndex,
+				//		indirectDrawCommands[i].vertexOffset,
+				//		indirectDrawCommands[i].firstInstance);
+				//
+				//}
 
-				cmdBuffer.bindVertexBuffers(0, meshes[i].vertices.buffer, { 0 });
-				cmdBuffer.bindIndexBuffer(meshes[i].indices.buffer, 0, vk::IndexType::eUint32);
-				cmdBuffer.drawIndexed(meshes[i].indexCount, 1, 0, 0, 0);
+				firstIndex += meshes[i].vertexCount;
+				vertexOffset += meshes[i].indexCount;
+
+
 			}
 		}
+
+		//else
+		//{
+		//	vk::DeviceSize offsets[1] = { 0 };
+		//	for (size_t i = 0; i < meshes.size(); i++) {
+		//		if ((renderSingleScenePart) && (i != scenePartIndex))
+		//			continue;
+		//
+		//		//if (meshes[i].material->opacity == 0.0f)
+		//		//	continue;
+		//
+		//		// todo : per material pipelines
+		//		//			vkCmdBindPipeline(cmdBuffer, vk::PipelineBindPoint::eGraphics, *mesh.material->pipeline);
+		//
+		//		// We will be using multiple descriptor sets for rendering
+		//		// In GLSL the selection is done via the set and binding keywords
+		//		// VS: layout (set = 0, binding = 0) uniform UBO;
+		//		// FS: layout (set = 1, binding = 0) uniform sampler2D samplerColorMap;
+		//
+		//
+		//		cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, wireframe ? pipelines.wireframe : *meshes[i].material->pipeline);
+		//		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, descriptorSets, {});
+		//
+		//		// Pass material properies via push constants
+		//		cmdBuffer.pushConstants(pipelineLayout,
+		//			vk::ShaderStageFlagBits::eFragment,
+		//			0,
+		//			sizeof(int),
+		//			&i);
+		//
+		//		cmdBuffer.bindVertexBuffers(0, meshes[i].vertices.buffer, { 0 });
+		//		cmdBuffer.bindIndexBuffer(meshes[i].indices.buffer, 0, vk::IndexType::eUint32);
+		//		cmdBuffer.drawIndexed(meshes[i].indexCount, 1, 0, 0, 0);
+		//	}
+		//}
 
 		// Render transparent objects last
 
@@ -632,7 +682,7 @@ public:
 		camera.type = Camera::CameraType::firstperson;
 		camera.movementSpeed = 7.5f;
 		camera.setTranslation({ -15.0f, 13.5f, 0.0f });
-		camera.setRotation(glm::vec3(5.0f, 90.0f, 0.0f));
+		camera.setRotation(glm::vec3(5.0f, 0.0f, 0.0f));
 		camera.setPerspective(60.0f, size, 0.1f, 256.0f);
 		title = "Vulkan Example - Scene rendering";
 	}
@@ -736,8 +786,8 @@ public:
 		std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages;
 
 		// Solid rendering pipeline
-		shaderStages[0] = loadShader(getAssetPath() + "shaders/scenerendering/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
-		shaderStages[1] = loadShader(getAssetPath() + "shaders/scenerendering/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
+		shaderStages[0] = loadShader(getAssetPath() + "shaders/scenerenderingMultiIndirect/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
+		shaderStages[1] = loadShader(getAssetPath() + "shaders/scenerenderingMultiIndirect/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
 
 		vk::GraphicsPipelineCreateInfo pipelineCreateInfo =
 			vkx::pipelineCreateInfo(
