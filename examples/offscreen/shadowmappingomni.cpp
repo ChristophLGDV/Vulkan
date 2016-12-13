@@ -205,7 +205,7 @@ public:
     // view matrix for the current cube map face
     void updateCubeFace(uint32_t faceIndex) {
         vk::ClearValue clearValues[2];
-        clearValues[0].color = vkx::clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+        clearValues[0].color = vkx::clearColor({ .0f, 0.0f, .0f, 1.0f });
         clearValues[1].depthStencil = { 1.0f, 0 };
 
         vk::RenderPassBeginInfo renderPassBeginInfo;
@@ -345,7 +345,7 @@ public:
             subresourceRange);
 
         for (uint32_t face = 0; face < 6; ++face) {
-            updateCubeFace(face);
+            updateCubeFace(face); 
         }
 
         // Change image layout for all cubemap faces to shader read after they have been copied
