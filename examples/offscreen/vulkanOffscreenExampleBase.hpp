@@ -178,10 +178,19 @@ namespace vkx {
         void draw() override {
             prepareFrame();
             if (offscreen.active) {
-                submit(offscreen.cmdBuffer, { { semaphores.acquireComplete, vk::PipelineStageFlagBits::eBottomOfPipe } }, offscreen.renderComplete);
-            }
-            drawCurrentCommandBuffer(offscreen.active ? offscreen.renderComplete : vk::Semaphore());
-            submitFrame();
+                submit(offscreen.cmdBuffer, 
+				{
+					{ semaphores.acquireComplete,  vk::PipelineStageFlagBits::eBottomOfPipe }
+				}, 
+				offscreen.renderComplete);
+            }  
+			
+			drawCurrentCommandBuffer(offscreen.active ? offscreen.renderComplete : vk::Semaphore());
+
+			 
+			 
+			
+			submitFrame();
         }
 
         void prepare() override {

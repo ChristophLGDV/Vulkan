@@ -103,10 +103,17 @@ public:
     //vk::CommandBuffer offscreen.cmdBuffer;
 
     VulkanExample() : vkx::OffscreenExampleBase(ENABLE_VALIDATION) {
-        camera.setZoom(-175.0f);
+		enableVsync = true;
+		enableTextOverlay = true;
         zoomSpeed = 10.0f;
         timerSpeed *= 0.25f;
-        camera.setRotation({ -20.5f, -673.0f, 0.0f });
+       // camera.setRotation({ -20.5f, -673.0f, 0.0f });
+		camera.type = Camera::CameraType::firstperson;
+		camera.movementSpeed = 2.5f;
+		camera.setTranslation({ -15.0f, -43.5f, -55.0f });
+		camera.setRotation(glm::vec3(5.0f, 0.0f, 0.0f));
+		camera.setPerspective(90.0f, size, 0.1f, 256.0f);
+		camera.setZoom(-75.0f);
         title = "Vulkan Example - Point light shadows";
     }
 
@@ -198,7 +205,7 @@ public:
     // view matrix for the current cube map face
     void updateCubeFace(uint32_t faceIndex) {
         vk::ClearValue clearValues[2];
-        clearValues[0].color = vkx::clearColor({ 0.0f, 0.0f, 0.0f, 1.0f });
+        clearValues[0].color = vkx::clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
         clearValues[1].depthStencil = { 1.0f, 0 };
 
         vk::RenderPassBeginInfo renderPassBeginInfo;
@@ -236,27 +243,44 @@ public:
             break;
         }
 
-        // Change image layout for all cubemap faces to transfer destination
-        vkx::setImageLayout(
-            offscreen.cmdBuffer,
-            offscreen.framebuffers[0].colors[0].image,
-            vk::ImageAspectFlagBits::eColor,
-            vk::ImageLayout::eUndefined,
-            vk::ImageLayout::eColorAttachmentOptimal,
-            vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
+		// Change image layout for all cubemap faces to transfer destination
+	
 
         // Render scene from cube face's point of view
         offscreen.cmdBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
         // Update shader push constant block
         // Contains current face view matrix
-        offscreen.cmdBuffer.pushConstants(pipelineLayouts.offscreen, vk::ShaderStageFlagBits::eVertex, 0, sizeof(glm::mat4), &viewMatrix);
+        offscreen.cmdBuffer.pushConstants(pipelineLayouts.offscreen,
+			vk::ShaderStageFlagBits::eVertex,
+			0,
+			sizeof(glm::mat4),
+			&viewMatrix);
+
         offscreen.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines.offscreen);
-        offscreen.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayouts.offscreen, 0, descriptorSets.offscreen, nullptr);
-        offscreen.cmdBuffer.bindVertexBuffers(VERTEX_BUFFER_BIND_ID, meshes.scene.vertices.buffer, { 0 });
+        offscreen.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, 
+			pipelineLayouts.offscreen, 
+			0, 
+			descriptorSets.offscreen,
+			nullptr);
+      
+		offscreen.cmdBuffer.bindVertexBuffers(VERTEX_BUFFER_BIND_ID, meshes.scene.vertices.buffer, { 0 });
         offscreen.cmdBuffer.bindIndexBuffer(meshes.scene.indices.buffer, 0, vk::IndexType::eUint32);
         offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
-        offscreen.cmdBuffer.endRenderPass();
+       
+		offscreen.cmdBuffer.endRenderPass();
+
+
+		vkx::setImageLayout(
+			offscreen.cmdBuffer,
+			offscreen.framebuffers[0].colors[0].image,
+			vk::ImageAspectFlagBits::eColor,
+			vk::ImageLayout::eColorAttachmentOptimal,
+			vk::ImageLayout::eTransferSrcOptimal,
+			vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+
+	 
+
+
 
         // Copy region for transfer from framebuffer to cube face
         vk::ImageCopy copyRegion;
@@ -270,7 +294,24 @@ public:
         copyRegion.extent = shadowCubeMap.extent;
 
         // Put image copy into command buffer
-        offscreen.cmdBuffer.copyImage(offscreen.framebuffers[0].colors[0].image, vk::ImageLayout::eTransferSrcOptimal, shadowCubeMap.image, vk::ImageLayout::eTransferDstOptimal, copyRegion);
+        offscreen.cmdBuffer.copyImage(
+			offscreen.framebuffers[0].colors[0].image,
+			vk::ImageLayout::eTransferSrcOptimal,
+			shadowCubeMap.image,
+			vk::ImageLayout::eTransferDstOptimal,
+			copyRegion);
+
+			 
+		vkx::setImageLayout(
+			offscreen.cmdBuffer,
+			offscreen.framebuffers[0].colors[0].image,
+			vk::ImageAspectFlagBits::eColor,
+			vk::ImageLayout::eTransferSrcOptimal,
+			vk::ImageLayout::eColorAttachmentOptimal,
+			vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		
+
+		
     }
 
     // Command buffer for rendering and copying all cube map faces
@@ -339,7 +380,11 @@ public:
     void updateDrawCommandBuffer(const vk::CommandBuffer& cmdBuffer) {
         cmdBuffer.setViewport(0, vkx::viewport(size));
         cmdBuffer.setScissor(0, vkx::rect2D(size));
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayouts.scene, 0, descriptorSets.scene, nullptr);
+
+        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, 
+			pipelineLayouts.scene,
+			0,
+			descriptorSets.scene, nullptr);
 
         if (displayCubeMap) {
             cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines.cubeMap);
@@ -433,8 +478,7 @@ public:
 
         // Offscreen pipeline layout
         // Push constants for cube map face view matrices
-        vk::PushConstantRange pushConstantRange =
-            vkx::pushConstantRange(vk::ShaderStageFlagBits::eVertex, sizeof(glm::mat4), 0);
+        vk::PushConstantRange pushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(glm::mat4));
 
         // Push constant ranges are part of the pipeline layout
         pPipelineLayoutCreateInfo.pushConstantRangeCount = 1;
@@ -520,8 +564,8 @@ public:
         // Load shaders
         std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages;
 
-        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmapomni/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
-        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmapomni/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
+        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
+        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
 
         vk::GraphicsPipelineCreateInfo pipelineCreateInfo =
             vkx::pipelineCreateInfo(pipelineLayouts.scene, renderPass);
@@ -541,15 +585,15 @@ public:
 
 
         // Cube map display pipeline
-        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmapomni/cubemapdisplay.vert.spv", vk::ShaderStageFlagBits::eVertex);
-        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmapomni/cubemapdisplay.frag.spv", vk::ShaderStageFlagBits::eFragment);
+        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/cubemapdisplay.vert.spv", vk::ShaderStageFlagBits::eVertex);
+        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/cubemapdisplay.frag.spv", vk::ShaderStageFlagBits::eFragment);
         rasterizationState.cullMode = vk::CullModeFlagBits::eFront;
         pipelines.cubeMap = device.createGraphicsPipelines(pipelineCache, pipelineCreateInfo, nullptr)[0];
 
 
         // Offscreen pipeline
-        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmapomni/offscreen.vert.spv", vk::ShaderStageFlagBits::eVertex);
-        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmapomni/offscreen.frag.spv", vk::ShaderStageFlagBits::eFragment);
+        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.vert.spv", vk::ShaderStageFlagBits::eVertex);
+        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.frag.spv", vk::ShaderStageFlagBits::eFragment);
         rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
         pipelineCreateInfo.layout = pipelineLayouts.offscreen;
         pipelines.offscreen = device.createGraphicsPipelines(pipelineCache, pipelineCreateInfo, nullptr)[0];
@@ -612,7 +656,7 @@ public:
     virtual void render() {
         if (!prepared)
             return;
-        draw();
+       draw();
         if (!paused) {
             updateUniformBufferOffscreen();
             updateUniformBuffers();
@@ -630,6 +674,8 @@ public:
     }
 
     void keyPressed(uint32_t key) override {
+
+		ExampleBase::keyPressed(key);
         switch (key) {
         case GLFW_KEY_D:
             toggleCubeMapDisplay();

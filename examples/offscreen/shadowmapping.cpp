@@ -157,12 +157,20 @@ public:
         offscreen.cmdBuffer.setScissor(0, vkx::rect2D(offscreen.size));
         // Set depth bias (aka "Polygon offset")
         offscreen.cmdBuffer.setDepthBias(depthBiasConstant, 0.0f, depthBiasSlope);
+
         offscreen.cmdBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
         offscreen.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines.offscreen);
-        offscreen.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayouts.offscreen, 0, descriptorSets.offscreen, nullptr);
-        offscreen.cmdBuffer.bindVertexBuffers(VERTEX_BUFFER_BIND_ID, meshes.scene.vertices.buffer, { 0 });
+      
+		offscreen.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+			pipelineLayouts.offscreen,
+			0,
+			descriptorSets.offscreen,
+			nullptr);
+       
+		offscreen.cmdBuffer.bindVertexBuffers(VERTEX_BUFFER_BIND_ID, meshes.scene.vertices.buffer, { 0 });
         offscreen.cmdBuffer.bindIndexBuffer(meshes.scene.indices.buffer, 0, vk::IndexType::eUint32);
         offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
+
         offscreen.cmdBuffer.endRenderPass();
         offscreen.cmdBuffer.end();
     }
@@ -539,6 +547,8 @@ public:
     }
 
     void keyPressed(uint32_t key) override {
+
+		Parent::keyPressed(key);
         switch (key) {
         case GLFW_KEY_S:
             toggleShadowMapDisplay();

@@ -626,7 +626,7 @@ public:
 	 
 
     void keyPressed(uint32_t keyCode) override {
-        Parent::keyPressed(keyCode);
+		Parent::keyPressed(keyCode);
         switch (keyCode) {
         case GLFW_KEY_W:
         case GAMEPAD_BUTTON_A:

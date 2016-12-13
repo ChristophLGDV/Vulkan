@@ -26,7 +26,9 @@ namespace vkx {
             for (auto& color : colors) {
                 color.destroy();
             }
-            depth.destroy();
+			if(depth.format != vk::Format::eUndefined )
+				depth.destroy();
+
             if (framebuffer) {
                 device.destroyFramebuffer(framebuffer);
                 framebuffer = vk::Framebuffer();

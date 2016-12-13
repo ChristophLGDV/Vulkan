@@ -71,7 +71,7 @@ namespace vkx {
         std::string getWindowTitle();
 
     protected:
-        bool enableVsync{ true };
+        bool enableVsync{ false };
         // Command buffers used for rendering
         std::vector<vk::CommandBuffer> primaryCmdBuffers;
         std::vector<vk::CommandBuffer> textCmdBuffers;
@@ -525,6 +525,7 @@ namespace vkx {
         // Called if a key is pressed
         // Can be overriden in derived class to do custom key handling
         virtual void keyPressed(uint32_t key) {
+			std::cout << "1";
             switch (key) {
             case GLFW_KEY_P:
                 paused = !paused;
