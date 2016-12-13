@@ -94,7 +94,7 @@ void ExampleBase::run() {
 #else
     setupWindow(); 
 
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+//	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 
 

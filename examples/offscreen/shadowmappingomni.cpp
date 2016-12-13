@@ -164,6 +164,10 @@ public:
 
         shadowCubeMap = createImage(imageCreateInfo, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
+		shadowCubeMap.extent = { imageCreateInfo.extent.width,
+			imageCreateInfo.extent.height,
+			imageCreateInfo.extent.depth };
+
         vk::ImageSubresourceRange subresourceRange;
         subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         subresourceRange.baseMipLevel = 0;
