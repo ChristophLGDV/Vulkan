@@ -38,11 +38,17 @@ namespace vkx {
         // Prepare a new framebuffer for offscreen rendering
         // The contents of this framebuffer are then
         // blitted to our render target
-        void create(const vkx::Context& context, const glm::uvec2& size, const std::vector<vk::Format>& colorFormats, vk::Format depthFormat, const vk::RenderPass& renderPass, vk::ImageUsageFlags colorUsage = vk::ImageUsageFlagBits::eSampled, vk::ImageUsageFlags depthUsage = vk::ImageUsageFlags()) {
+        void create(const vkx::Context& context, 
+			const glm::uvec2& size, 
+			const std::vector<vk::Format>& colorFormats,
+			vk::Format depthFormat, 
+			const vk::RenderPass& renderPass, 
+			vk::ImageUsageFlags colorUsage = vk::ImageUsageFlagBits::eSampled, 
+			vk::ImageUsageFlags depthUsage = vk::ImageUsageFlags()) 
+		{
             device = context.device;
             destroy();
 
-            colors.resize(colorFormats.size());
 
             // Color attachment
             vk::ImageCreateInfo image;
@@ -63,6 +69,7 @@ namespace vkx {
             colorImageView.subresourceRange.levelCount = 1;
             colorImageView.subresourceRange.layerCount = 1;
 
+			colors.resize(colorFormats.size());
             for (size_t i = 0; i < colorFormats.size(); ++i) {
                 image.format = colorFormats[i];
                 colors[i] = context.createImage(image, vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -108,5 +115,65 @@ namespace vkx {
             fbufCreateInfo.layers = 1;
             framebuffer = context.device.createFramebuffer(fbufCreateInfo);
         }
-    };
+ 
+
+		void create(const vkx::Context& context,
+			const glm::uvec2& size,
+			const std::vector<vk::Format>& colorFormats,
+			vk::Format depthFormat,
+			const vk::RenderPass& renderPass,
+			vk::ImageCreateInfo colorImage,
+			vk::ImageViewCreateInfo colorView,
+			const vk::ImageCreateInfo& depthStencilImage,
+			const vk::ImageViewCreateInfo& depthStencilView,
+			vk::FramebufferCreateInfo fbufCreateInfo
+		)
+		{
+			device = context.device;
+			destroy();
+
+
+			colors.resize(colorFormats.size());
+			for (size_t i = 0; i < colorFormats.size(); ++i) {
+				colorImage.format = colorFormats[i];
+				colors[i] = context.createImage(colorImage, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				colorView.format = colorFormats[i];
+				colorView.image = colors[i].image;
+				colors[i].view = device.createImageView(colorView);
+			}
+
+
+
+			bool useDepth = depthStencilImage != vk::ImageCreateInfo();
+
+
+			if (useDepth) 
+			{
+				depth = context.createImage(depthStencilImage, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+				vk::ImageViewCreateInfo depthStencilView; 
+				depthStencilView.image = depth.image;
+				depth.view = device.createImageView(depthStencilView);
+
+			}
+
+
+			std::vector<vk::ImageView> attachments;
+			attachments.resize(colors.size());
+			for (size_t i = 0; i < colors.size(); ++i) {
+				attachments[i] = colors[i].view;
+			}
+			if (useDepth)
+			{
+				attachments.push_back(depth.view);
+			}
+
+			fbufCreateInfo.renderPass = renderPass;
+			fbufCreateInfo.attachmentCount = (uint32_t)attachments.size();
+			fbufCreateInfo.pAttachments = attachments.data();
+
+			framebuffer = context.device.createFramebuffer(fbufCreateInfo);
+
+		}
+	 };
 }

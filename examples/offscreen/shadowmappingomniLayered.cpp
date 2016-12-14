@@ -638,11 +638,68 @@ public:
     }
 
     void prepare() {
-        offscreen.size = glm::uvec2(TEX_DIM);
-        offscreen.colorFormats = { { vk::Format::eR32Sfloat } };
-        offscreen.depthFormat = vk::Format::eUndefined;
-        offscreen.attachmentUsage = vk::ImageUsageFlagBits::eTransferSrc;
-        offscreen.colorFinalLayout = vk::ImageLayout::eTransferSrcOptimal;
+
+		bool defaultFB = false;
+		offscreen.defaultFramebuffer = defaultFB;
+		offscreen.size = glm::uvec2(TEX_DIM);
+		if(defaultFB)
+		{
+			offscreen.colorFormats = { { vk::Format::eR32Sfloat } };
+			offscreen.depthFormat = vk::Format::eUndefined;
+			offscreen.attachmentUsage = vk::ImageUsageFlagBits::eTransferSrc;
+			offscreen.colorFinalLayout = vk::ImageLayout::eTransferSrcOptimal;
+		}
+		else
+		{
+			//no color Attachments
+			offscreen.colorFormats = { {  } };
+			offscreen.colorFinalLayout = vk::ImageLayout::eUndefined;
+			offscreen.depthFinalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			// Depth attachment 
+			
+			// Image
+
+			offscreen.depthStencilImage.imageType = vk::ImageType::e2D;
+			offscreen.depthStencilImage.extent.width = TEX_DIM;
+			offscreen.depthStencilImage.extent.height = TEX_DIM;
+			offscreen.depthStencilImage.extent.depth = 1;
+			offscreen.depthStencilImage.mipLevels = 1;
+			offscreen.depthStencilImage.arrayLayers = 6; // Cubemap
+			offscreen.depthStencilImage.format = vkx::getSupportedDepthFormat(offscreen.context.physicalDevice);
+			offscreen.depthStencilImage.samples = vk::SampleCountFlagBits::e1;
+			offscreen.depthStencilImage.tiling = vk::ImageTiling::eOptimal;
+			offscreen.depthStencilImage.flags = vk::ImageCreateFlagBits::eCubeCompatible;
+			// vk::Image of the framebuffer is  RT and Texture 
+			offscreen.depthStencilImage.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled;
+
+			// View
+
+			offscreen.depthStencilView.viewType = vk::ImageViewType::eCube; // Cubemap			
+			offscreen.depthStencilView.format		=  vkx::getSupportedDepthFormat(offscreen.context.physicalDevice);
+			offscreen.depthStencilView.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+			offscreen.depthStencilView.subresourceRange.levelCount = 1;
+			offscreen.depthStencilView.subresourceRange.layerCount = 6; // should it not be 1?
+
+			// Framebuffer 
+			offscreen.fbufCreateInfo.width = TEX_DIM;
+			offscreen.fbufCreateInfo.height = TEX_DIM;
+			offscreen.fbufCreateInfo.layers = 6;
+
+				
+
+		}
+
+
+
+
+
+
+
+
+
+
+
+
         OffscreenExampleBase::prepare();
         loadMeshes();
         setupVertexDescriptions();
