@@ -66,10 +66,7 @@ public:
     } uboVSscene;
 
     struct {
-        glm::mat4 projection;
-        glm::mat4 view;
-        glm::mat4 model;
-        glm::vec4 lightPos;
+		glm::mat4 mvp[6];
     } uboOffscreenVS;
 
     struct {
@@ -496,43 +493,47 @@ public:
         vk::DescriptorSetAllocateInfo allocInfo =
             vkx::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayout, 1);
 
-        // 3D scene
-        descriptorSets.scene = device.allocateDescriptorSets(allocInfo)[0];
+		// 3D scene
+		{
+			descriptorSets.scene = device.allocateDescriptorSets(allocInfo)[0];
 
-        // vk::Image descriptor for the cube map 
-        vk::DescriptorImageInfo texDescriptor =
-            vkx::descriptorImageInfo(shadowCubeMap.sampler, shadowCubeMap.view, vk::ImageLayout::eGeneral);
+			// vk::Image descriptor for the cube map 
+			vk::DescriptorImageInfo texDescriptor =
+				vkx::descriptorImageInfo(offscreen.framebuffers[0].depth.sampler,
+					framebuffer.depth.sampler, shadowCubeMap.view, vk::ImageLayout::eGeneral);
 
-        std::vector<vk::WriteDescriptorSet> sceneDescriptorSets =
-        {
-            // Binding 0 : Vertex shader uniform buffer
-            vkx::writeDescriptorSet(
-            descriptorSets.scene,
-                vk::DescriptorType::eUniformBuffer,
-                0,
-                &uniformData.scene.descriptor),
-            // Binding 1 : Fragment shader shadow sampler
-            vkx::writeDescriptorSet(
-                descriptorSets.scene,
-                vk::DescriptorType::eCombinedImageSampler,
-                1,
-                &texDescriptor)
-        };
-        device.updateDescriptorSets(sceneDescriptorSets.size(), sceneDescriptorSets.data(), 0, NULL);
+			std::vector<vk::WriteDescriptorSet> sceneDescriptorSets =
+			{
+				// Binding 0 : Vertex shader uniform buffer
+				vkx::writeDescriptorSet(
+				descriptorSets.scene,
+					vk::DescriptorType::eUniformBuffer,
+					0,
+					&uniformData.scene.descriptor),
+				// Binding 1 : Fragment shader shadow sampler
+				vkx::writeDescriptorSet(
+					descriptorSets.scene,
+					vk::DescriptorType::eCombinedImageSampler,
+					1,
+					&texDescriptor)
+			};
+			device.updateDescriptorSets(sceneDescriptorSets.size(), sceneDescriptorSets.data(), 0, NULL);
+		}
+		// Offscreen
+		{
+			descriptorSets.offscreen = device.allocateDescriptorSets(allocInfo)[0];
 
-        // Offscreen
-        descriptorSets.offscreen = device.allocateDescriptorSets(allocInfo)[0];
-
-        std::vector<vk::WriteDescriptorSet> offscreenWriteDescriptorSets =
-        {
-            // Binding 0 : Vertex shader uniform buffer
-            vkx::writeDescriptorSet(
-                descriptorSets.offscreen,
-                vk::DescriptorType::eUniformBuffer,
-                0,
-                &uniformData.offscreen.descriptor),
-        };
-        device.updateDescriptorSets(offscreenWriteDescriptorSets.size(), offscreenWriteDescriptorSets.data(), 0, NULL);
+			std::vector<vk::WriteDescriptorSet> offscreenWriteDescriptorSets =
+			{
+				// Binding 0 : Vertex shader uniform buffer
+				vkx::writeDescriptorSet(
+					descriptorSets.offscreen,
+					vk::DescriptorType::eUniformBuffer,
+					0,
+					&uniformData.offscreen.descriptor),
+			};
+			device.updateDescriptorSets(offscreenWriteDescriptorSets.size(), offscreenWriteDescriptorSets.data(), 0, NULL);
+		}
     }
 
     void preparePipelines() {
@@ -595,9 +596,12 @@ public:
         pipelines.cubeMap = device.createGraphicsPipelines(pipelineCache, pipelineCreateInfo, nullptr)[0];
 
 
-        // Offscreen pipeline
-        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.vert.spv", vk::ShaderStageFlagBits::eVertex);
-        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.frag.spv", vk::ShaderStageFlagBits::eFragment);
+		// Offscreen pipeline
+	//	shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.vert.spv", vk::ShaderStageFlagBits::eVertex);
+	//	shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.frag.spv", vk::ShaderStageFlagBits::eFragment);
+		// Offscreen pipeline
+		shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/shadow.vert.spv", vk::ShaderStageFlagBits::eVertex);
+		shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/shadow.geom.spv", vk::ShaderStageFlagBits::eGeometry);
         rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
         pipelineCreateInfo.layout = pipelineLayouts.offscreen;
         pipelines.offscreen = device.createGraphicsPipelines(pipelineCache, pipelineCreateInfo, nullptr)[0];
@@ -627,13 +631,44 @@ public:
         uniformData.scene.copy(uboVSscene);
     }
 
-    void updateUniformBufferOffscreen() {
-        lightPos.x = sin(glm::radians(timer * 360.0f)) * 1.0f;
-        lightPos.z = cos(glm::radians(timer * 360.0f)) * 1.0f;
-        uboOffscreenVS.projection = glm::perspective((float)(M_PI / 2.0), 1.0f, zNear, zFar);
-        uboOffscreenVS.view = glm::mat4();
-        uboOffscreenVS.model = glm::translate(glm::mat4(), glm::vec3(-lightPos.x, -lightPos.y, -lightPos.z));
-        uboOffscreenVS.lightPos = lightPos;
+    void updateUniformBufferOffscreen() 
+	{
+		lightPos.x = sin(glm::radians(timer * 360.0f)) * 1.0f;
+		lightPos.z = cos(glm::radians(timer * 360.0f)) * 1.0f;
+
+		glm::mat4 P = glm::perspective((float)(M_PI / 2.0), 1.0f, zNear, zFar);
+
+		glm::mat4 M = glm::translate(glm::mat4(), glm::vec3(-lightPos.x, -lightPos.y, -lightPos.z));
+
+		for (uint32_t face = 0; face < 6; ++face)
+		{
+			glm::mat4 V;
+			switch (face)
+			{
+			case 0: // POSITIVE_X
+				V = glm::rotate(V, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				V = glm::rotate(V, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				break;
+			case 1:	// NEGATIVE_X						  
+				V = glm::rotate(V, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				V = glm::rotate(V, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				break;
+			case 2:	// POSITIVE_Y						  
+				V = glm::rotate(V, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				break;
+			case 3:	// NEGATIVE_Y						 
+				V = glm::rotate(V, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				break;
+			case 4:	// POSITIVE_Z						 
+				V = glm::rotate(V, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				break;
+			case 5:	// NEGATIVE_Z						 
+				V = glm::rotate(V, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+				break;
+			}
+			uboOffscreenVS.mvp[face] = P  * V *M;
+		}
+
         uniformData.offscreen.copy(uboOffscreenVS);
     }
 

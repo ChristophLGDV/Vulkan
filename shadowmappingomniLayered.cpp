@@ -426,7 +426,7 @@ public:
 			// Image descriptor for the cube map 
 			VkDescriptorImageInfo texDescriptor =
 				vkTools::initializers::descriptorImageInfo(
-					offscreenPass.depthSampler,
+					framebuffer.depth.sampler,
 					offscreenPass.depth.view,
 					VK_IMAGE_LAYOUT_GENERAL);
 
