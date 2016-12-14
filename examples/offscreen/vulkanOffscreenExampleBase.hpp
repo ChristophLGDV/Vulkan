@@ -10,7 +10,7 @@ namespace vkx {
 	public: 
 		const vkx::Context& context;
 		bool active{ true };
-
+		bool depthSampler{ false };
 
 		bool defaultFramebuffer{ true };
 		vk::ImageCreateInfo colorImage;
@@ -91,7 +91,8 @@ namespace vkx {
 			sampler.minLod = 0.0f;
 			sampler.maxLod = 0.0f;
 			sampler.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-			for (auto& framebuffer : framebuffers) {
+			for (auto& framebuffer : framebuffers) 
+			{
 				if (attachmentUsage | vk::ImageUsageFlagBits::eSampled) {
 					for (auto& color : framebuffer.colors) {
 						color.sampler = context.device.createSampler(sampler);
@@ -101,7 +102,6 @@ namespace vkx {
 				{ 
 					if (depthSampler)
 					{
-
 						sampler.compareEnable = true;
 						sampler.compareOp = vk::CompareOp::eLess;
 					}
@@ -109,12 +109,12 @@ namespace vkx {
 					framebuffer.depth.sampler = context.device.createSampler(sampler);
 
 
-
 				}
 			}
 		}
 
-		virtual void prepareRenderPass() {
+		virtual void prepareRenderPass() 
+		{
 			vk::SubpassDescription subpass;
 			subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 
@@ -156,31 +156,64 @@ namespace vkx {
 
 			std::vector<vk::SubpassDependency> subpassDependencies;
 			{
-				if ((colorFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) && (colorFinalLayout != vk::ImageLayout::eUndefined)) {
+				//if ((colorFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) &&
+				//	(colorFinalLayout != vk::ImageLayout::eUndefined)) {
+				//	// Implicit transition 
+				//	vk::SubpassDependency dependency;
+				//	dependency.srcSubpass = 0;
+				//	dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+				//	dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+				//
+				//	dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+				//	dependency.dstAccessMask = vkx::accessFlagsForLayout(colorFinalLayout);
+				//	dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+				//	subpassDependencies.push_back(dependency);
+				//}
+				//
+				//if ((depthFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) && 
+				//	(depthFinalLayout != vk::ImageLayout::eUndefined)) {
+				//	// Implicit transition 
+				//	vk::SubpassDependency dependency;
+				//	dependency.srcSubpass = 0;
+				//	dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+				//	dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+				//
+				//	dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+				//	dependency.dstAccessMask = vkx::accessFlagsForLayout(depthFinalLayout);
+				//	dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+				//	subpassDependencies.push_back(dependency);
+				//}
+			
+				{
 					// Implicit transition 
 					vk::SubpassDependency dependency;
-					dependency.srcSubpass = 0;
-					dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-					dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-
-					dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-					dependency.dstAccessMask = vkx::accessFlagsForLayout(colorFinalLayout);
+					dependency.srcSubpass	= VK_SUBPASS_EXTERNAL;
+					dependency.srcAccessMask= vk::AccessFlagBits::eMemoryRead;
+					dependency.srcStageMask	= vk::PipelineStageFlagBits::eBottomOfPipe ;
+				
+					dependency.dstSubpass	= 0;
+					dependency.dstAccessMask= vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+					dependency.dstStageMask	= vk::PipelineStageFlagBits::eColorAttachmentOutput; 
+					
+					dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+					subpassDependencies.push_back(dependency);
+				}
+				 
+				{
+					// Implicit transition 
+					vk::SubpassDependency dependency;
+					dependency.srcSubpass	= 0;
+					dependency.srcAccessMask= vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+					dependency.srcStageMask	= vk::PipelineStageFlagBits::eColorAttachmentOutput;
+													 
+					dependency.dstSubpass	= VK_SUBPASS_EXTERNAL;
+					dependency.dstAccessMask= vk::AccessFlagBits::eMemoryRead;
 					dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+
+					dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
 					subpassDependencies.push_back(dependency);
 				}
 
-				if ((depthFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) && (depthFinalLayout != vk::ImageLayout::eUndefined)) {
-					// Implicit transition 
-					vk::SubpassDependency dependency;
-					dependency.srcSubpass = 0;
-					dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-					dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-
-					dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-					dependency.dstAccessMask = vkx::accessFlagsForLayout(depthFinalLayout);
-					dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-					subpassDependencies.push_back(dependency);
-				}
 			}
 
 			if (renderPass) {
