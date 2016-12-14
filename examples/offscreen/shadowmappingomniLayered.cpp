@@ -330,33 +330,68 @@ public:
         offscreen.cmdBuffer.setViewport(0, vkx::viewport(offscreen.size));
         offscreen.cmdBuffer.setScissor(0, vkx::rect2D(offscreen.size));
 
-        vk::ImageSubresourceRange subresourceRange;
-        subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        subresourceRange.baseMipLevel = 0;
-        subresourceRange.levelCount = 1;
-        subresourceRange.layerCount = 6;
+       //vk::ImageSubresourceRange subresourceRange;
+       //subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+       //subresourceRange.baseMipLevel = 0;
+       //subresourceRange.levelCount = 1;
+       //subresourceRange.layerCount = 6;
+
+		vk::ClearValue clearValues[2];
+		clearValues[0].color = vkx::clearColor({ .0f, 0.0f, .0f, 1.0f });
+		clearValues[1].depthStencil = { 1.0f, 0 };
+
+		vk::RenderPassBeginInfo renderPassBeginInfo;
+		// Reuse render pass from example pass
+		renderPassBeginInfo.renderPass = offscreen.renderPass;
+		renderPassBeginInfo.framebuffer = offscreen.framebuffers[0].framebuffer;
+		renderPassBeginInfo.renderArea.extent.width = offscreen.size.x;
+		renderPassBeginInfo.renderArea.extent.height = offscreen.size.y;
+		renderPassBeginInfo.clearValueCount = 2;
+		renderPassBeginInfo.pClearValues = clearValues;
+
+
+		offscreen.cmdBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+		
+		offscreen.cmdBuffer.bindPipeline(
+			vk::PipelineBindPoint::eGraphics, 
+			pipelines.offscreen);
+
+		offscreen.cmdBuffer.bindDescriptorSets(
+			vk::PipelineBindPoint::eGraphics,
+			pipelineLayouts.offscreen,
+			0,
+			descriptorSets.offscreen,
+			nullptr);
+
+		offscreen.cmdBuffer.bindVertexBuffers(VERTEX_BUFFER_BIND_ID, meshes.scene.vertices.buffer, { 0 });
+		offscreen.cmdBuffer.bindIndexBuffer(meshes.scene.indices.buffer, 0, vk::IndexType::eUint32);
+		offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
+
+		offscreen.cmdBuffer.endRenderPass();
+
+
 
         // Change image layout for all cubemap faces to transfer destination
-        vkx::setImageLayout(
-            offscreen.cmdBuffer,
-            shadowCubeMap.image,
-            vk::ImageAspectFlagBits::eColor,
-            vk::ImageLayout::eShaderReadOnlyOptimal,
-            vk::ImageLayout::eTransferDstOptimal,
-            subresourceRange);
+      //vkx::setImageLayout(
+      //    offscreen.cmdBuffer,
+      //    shadowCubeMap.image,
+      //    vk::ImageAspectFlagBits::eColor,
+      //    vk::ImageLayout::eShaderReadOnlyOptimal,
+      //    vk::ImageLayout::eTransferDstOptimal,
+      //    subresourceRange);
 
-        for (uint32_t face = 0; face < 6; ++face) {
-            updateCubeFace(face); 
-        }
+      // for (uint32_t face = 0; face < 6; ++face) {
+      //     updateCubeFace(face); 
+      // }
 
         // Change image layout for all cubemap faces to shader read after they have been copied
-        vkx::setImageLayout(
-            offscreen.cmdBuffer,
-            shadowCubeMap.image,
-            vk::ImageAspectFlagBits::eColor,
-            vk::ImageLayout::eTransferDstOptimal,
-            vk::ImageLayout::eShaderReadOnlyOptimal,
-            subresourceRange);
+      //  vkx::setImageLayout(
+      //      offscreen.cmdBuffer,
+      //      shadowCubeMap.image,
+      //      vk::ImageAspectFlagBits::eColor,
+      //      vk::ImageLayout::eTransferDstOptimal,
+      //      vk::ImageLayout::eShaderReadOnlyOptimal,
+      //      subresourceRange);
 
         offscreen.cmdBuffer.end();
     }
@@ -600,8 +635,8 @@ public:
 	//	shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.vert.spv", vk::ShaderStageFlagBits::eVertex);
 	//	shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.frag.spv", vk::ShaderStageFlagBits::eFragment);
 		// Offscreen pipeline
-		shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/shadow.vert.spv", vk::ShaderStageFlagBits::eVertex);
-		shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/shadow.geom.spv", vk::ShaderStageFlagBits::eGeometry);
+		shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/shadow.vert.spv", vk::ShaderStageFlagBits::eVertex);
+		shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/shadow.geom.spv", vk::ShaderStageFlagBits::eGeometry);
         rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
         pipelineCreateInfo.layout = pipelineLayouts.offscreen;
         pipelines.offscreen = device.createGraphicsPipelines(pipelineCache, pipelineCreateInfo, nullptr)[0];
