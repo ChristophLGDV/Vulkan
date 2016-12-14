@@ -499,8 +499,8 @@ public:
 
 			// vk::Image descriptor for the cube map 
 			vk::DescriptorImageInfo texDescriptor =
-				vkx::descriptorImageInfo(offscreen.framebuffers[0].depth.sampler,
-					framebuffer.depth.sampler, shadowCubeMap.view, vk::ImageLayout::eGeneral);
+				vkx::descriptorImageInfo(offscreen.framebuffers[0].depth.sampler, 
+					offscreen.framebuffers[0].depth.view, vk::ImageLayout::eGeneral);
 
 			std::vector<vk::WriteDescriptorSet> sceneDescriptorSets =
 			{
@@ -687,7 +687,7 @@ public:
 		else
 		{
 			//no color Attachments
-			offscreen.colorFormats = { {  } };
+			offscreen.colorFormats = { };
 			offscreen.colorFinalLayout = vk::ImageLayout::eUndefined;
 			offscreen.depthFinalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 			// Depth attachment 

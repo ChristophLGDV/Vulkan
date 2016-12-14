@@ -124,8 +124,8 @@ namespace vkx {
 			const vk::RenderPass& renderPass,
 			vk::ImageCreateInfo colorImage,
 			vk::ImageViewCreateInfo colorView,
-			const vk::ImageCreateInfo& depthStencilImage,
-			const vk::ImageViewCreateInfo& depthStencilView,
+			vk::ImageCreateInfo depthStencilImage,
+			vk::ImageViewCreateInfo depthStencilView,
 			vk::FramebufferCreateInfo fbufCreateInfo
 		)
 		{
@@ -150,8 +150,7 @@ namespace vkx {
 			if (useDepth) 
 			{
 				depth = context.createImage(depthStencilImage, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-				vk::ImageViewCreateInfo depthStencilView; 
+				 
 				depthStencilView.image = depth.image;
 				depth.view = device.createImageView(depthStencilView);
 
