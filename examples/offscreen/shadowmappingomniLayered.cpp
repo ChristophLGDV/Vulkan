@@ -30,7 +30,7 @@ std::vector<vkx::VertexLayout> vertexLayout =
 
 class VulkanExample : public vkx::OffscreenExampleBase {
 public:
-    bool displayCubeMap = false;
+    bool displayCubeMap = true;
 
     float zNear = 0.1f;
     float zFar = 1024.0f;
@@ -85,7 +85,10 @@ public:
         vk::DescriptorSet offscreen;
     } descriptorSets;
 
-    vk::DescriptorSetLayout descriptorSetLayout;
+	struct {
+		vk::DescriptorSetLayout	scene;
+		vk::DescriptorSetLayout	offscreen;
+	} descriptorSetLayouts;
 
     vkx::Texture shadowCubeMap;
 
@@ -111,7 +114,7 @@ public:
 		camera.setRotation(glm::vec3(5.0f, 0.0f, 0.0f));
 		camera.setPerspective(90.0f, size, 0.1f, 256.0f);
 		camera.setZoom(-75.0f);
-        title = "Vulkan Example - Point light shadows";
+        title = "Vulkan Example - Point light shadows - Layered Rendering";
     }
 
     ~VulkanExample() {
@@ -129,7 +132,8 @@ public:
         device.destroyPipelineLayout(pipelineLayouts.scene);
         device.destroyPipelineLayout(pipelineLayouts.offscreen);
 
-        device.destroyDescriptorSetLayout(descriptorSetLayout);
+		device.destroyDescriptorSetLayout(descriptorSetLayouts.scene);
+		device.destroyDescriptorSetLayout(descriptorSetLayouts.offscreen);
 
         // Meshes
         meshes.scene.destroy();
@@ -336,9 +340,8 @@ public:
        //subresourceRange.levelCount = 1;
        //subresourceRange.layerCount = 6;
 
-		vk::ClearValue clearValues[2];
-		clearValues[0].color = vkx::clearColor({ .0f, 0.0f, .0f, 1.0f });
-		clearValues[1].depthStencil = { 1.0f, 0 };
+		vk::ClearValue clearValues[1];
+		clearValues[0].depthStencil = { 1.0f, 0 };
 
 		vk::RenderPassBeginInfo renderPassBeginInfo;
 		// Reuse render pass from example pass
@@ -346,7 +349,7 @@ public:
 		renderPassBeginInfo.framebuffer = offscreen.framebuffers[0].framebuffer;
 		renderPassBeginInfo.renderArea.extent.width = offscreen.size.x;
 		renderPassBeginInfo.renderArea.extent.height = offscreen.size.y;
-		renderPassBeginInfo.clearValueCount = 2;
+		renderPassBeginInfo.clearValueCount = 1;
 		renderPassBeginInfo.pClearValues = clearValues;
 
 
@@ -484,53 +487,94 @@ public:
     }
 
     void setupDescriptorSetLayout() {
-        // Shared pipeline layout
-        std::vector<vk::DescriptorSetLayoutBinding> setLayoutBindings =
-        {
-            // Binding 0 : Vertex shader uniform buffer
-            vkx::descriptorSetLayoutBinding(
-                vk::DescriptorType::eUniformBuffer,
-                vk::ShaderStageFlagBits::eVertex,
-                0),
-            // Binding 1 : Fragment shader image sampler (cube map)
-            vkx::descriptorSetLayoutBinding(
-                vk::DescriptorType::eCombinedImageSampler,
-                vk::ShaderStageFlagBits::eFragment,
-                1)
-        };
-
-        vk::DescriptorSetLayoutCreateInfo descriptorLayout =
-            vkx::descriptorSetLayoutCreateInfo(setLayoutBindings.data(), setLayoutBindings.size());
-
-        descriptorSetLayout = device.createDescriptorSetLayout(descriptorLayout);
+      
 
 
-        // 3D scene pipeline layout
-        vk::PipelineLayoutCreateInfo pPipelineLayoutCreateInfo =
-            vkx::pipelineLayoutCreateInfo(&descriptorSetLayout, 1);
+		// Scene pipeline layout
+		{
+			std::vector<vk::DescriptorSetLayoutBinding> setLayoutBindings =
+			{
+				// Binding 0 : Vertex shader uniform buffer
+				vkx::descriptorSetLayoutBinding(
+					vk::DescriptorType::eUniformBuffer,
+					vk::ShaderStageFlagBits::eVertex,
+					0),
+				// Binding 1 : Fragment shader image sampler (cube map)
+				vkx::descriptorSetLayoutBinding(
+					vk::DescriptorType::eCombinedImageSampler,
+					vk::ShaderStageFlagBits::eFragment,
+					1)
+			};
 
-        pipelineLayouts.scene = device.createPipelineLayout(pPipelineLayoutCreateInfo);
+
+			vk::DescriptorSetLayoutCreateInfo descriptorLayoutInfo =
+				vkx::descriptorSetLayoutCreateInfo(setLayoutBindings.data(), setLayoutBindings.size());
+
+			descriptorSetLayouts.scene = device.createDescriptorSetLayout(descriptorLayoutInfo);
 
 
-        // Offscreen pipeline layout
+
+			vk::PipelineLayoutCreateInfo pPipelineLayoutCreateInfo =
+				vkx::pipelineLayoutCreateInfo(&descriptorSetLayouts.scene, 1);
+
+			pipelineLayouts.scene = device.createPipelineLayout(pPipelineLayoutCreateInfo);
+
+			  
+		}
+
+
+		// Offscreen pipeline layout
+		{
+
+
+			std::vector<vk::DescriptorSetLayoutBinding> setLayoutBindings =
+			{
+				// Binding 0 : Vertex shader uniform buffer
+				vkx::descriptorSetLayoutBinding(
+					vk::DescriptorType::eUniformBuffer,
+					vk::ShaderStageFlagBits::eGeometry,
+					0), 
+			};
+
+			vk::DescriptorSetLayoutCreateInfo descriptorLayoutInfo =
+				vkx::descriptorSetLayoutCreateInfo(setLayoutBindings.data(), setLayoutBindings.size());
+
+			descriptorSetLayouts.offscreen = device.createDescriptorSetLayout(descriptorLayoutInfo);
+
+
+
+			vk::PipelineLayoutCreateInfo pPipelineLayoutCreateInfo =
+				vkx::pipelineLayoutCreateInfo(&descriptorSetLayouts.offscreen, 1);
+
+			pipelineLayouts.offscreen = device.createPipelineLayout(pPipelineLayoutCreateInfo);
+			 
+		}
+
+
+
+
+
+		//no push constant range for offscreen rendering required
+		// Offscreen pipeline layout
         // Push constants for cube map face view matrices
-        vk::PushConstantRange pushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(glm::mat4));
-
-        // Push constant ranges are part of the pipeline layout
-        pPipelineLayoutCreateInfo.pushConstantRangeCount = 1;
-        pPipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
-
-        pipelineLayouts.offscreen = device.createPipelineLayout(pPipelineLayoutCreateInfo);
+        //vk::PushConstantRange pushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(glm::mat4));
+		//
+        //// Push constant ranges are part of the pipeline layout
+        //pPipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+        //pPipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
+		//
+        //pipelineLayouts.offscreen = device.createPipelineLayout(pPipelineLayoutCreateInfo);
 
     }
 
     void setupDescriptorSets() {
-        vk::DescriptorSetAllocateInfo allocInfo =
-            vkx::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayout, 1);
-
+      
 		// 3D scene
-		{
-			descriptorSets.scene = device.allocateDescriptorSets(allocInfo)[0];
+		{  
+			vk::DescriptorSetAllocateInfo allocInfoScene =
+			vkx::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.scene, 1);
+
+			descriptorSets.scene = device.allocateDescriptorSets(allocInfoScene)[0];
 
 			// vk::Image descriptor for the cube map 
 			vk::DescriptorImageInfo texDescriptor =
@@ -556,7 +600,10 @@ public:
 		}
 		// Offscreen
 		{
-			descriptorSets.offscreen = device.allocateDescriptorSets(allocInfo)[0];
+			vk::DescriptorSetAllocateInfo allocInfoOffscreen =
+				vkx::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.offscreen, 1);
+
+			descriptorSets.offscreen = device.allocateDescriptorSets(allocInfoOffscreen)[0];
 
 			std::vector<vk::WriteDescriptorSet> offscreenWriteDescriptorSets =
 			{

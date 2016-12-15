@@ -348,8 +348,8 @@ public:
 
 	void setupDescriptorSetLayout()
 	{
-		{
 			// Scene pipeline layout
+		{
 			std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings =
 			{
 				// Binding 0 : Vertex shader uniform buffer
