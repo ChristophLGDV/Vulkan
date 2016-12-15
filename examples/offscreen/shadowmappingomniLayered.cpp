@@ -30,7 +30,7 @@ std::vector<vkx::VertexLayout> vertexLayout =
 
 class VulkanExample : public vkx::OffscreenExampleBase {
 public:
-    bool displayCubeMap = true;
+    bool displayCubeMap = false;
 
     float zNear = 0.1f;
     float zFar = 1024.0f;
@@ -651,8 +651,8 @@ public:
         // Load shaders
         std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages;
 
-        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
-        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
+        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
+        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
 
         vk::GraphicsPipelineCreateInfo pipelineCreateInfo =
             vkx::pipelineCreateInfo(pipelineLayouts.scene, renderPass);
@@ -672,8 +672,8 @@ public:
 
 
         // Cube map display pipeline
-        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/cubemapdisplay.vert.spv", vk::ShaderStageFlagBits::eVertex);
-        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/cubemapdisplay.frag.spv", vk::ShaderStageFlagBits::eFragment);
+        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/cubemapdisplay.vert.spv", vk::ShaderStageFlagBits::eVertex);
+        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/cubemapdisplay.frag.spv", vk::ShaderStageFlagBits::eFragment);
         rasterizationState.cullMode = vk::CullModeFlagBits::eFront;
         pipelines.cubeMap = device.createGraphicsPipelines(pipelineCache, pipelineCreateInfo, nullptr)[0];
 
@@ -718,7 +718,7 @@ public:
 		lightPos.x = sin(glm::radians(timer * 360.0f)) * 1.0f;
 		lightPos.z = cos(glm::radians(timer * 360.0f)) * 1.0f;
 
-		glm::mat4 P = glm::perspective((float)(M_PI / 2.0), 1.0f, zNear, zFar);
+		glm::mat4 P = camera.vulkanCorrection * glm::perspective((float)(M_PI / 2.0), 1.0f, zNear, zFar);
 
 		glm::mat4 M = glm::translate(glm::mat4(), glm::vec3(-lightPos.x, -lightPos.y, -lightPos.z));
 
@@ -759,6 +759,9 @@ public:
 		bool defaultFB = false;
 		offscreen.defaultFramebuffer = defaultFB;
 		offscreen.size = glm::uvec2(TEX_DIM);
+
+
+
 		if(defaultFB)
 		{
 			offscreen.colorFormats = { { vk::Format::eR32Sfloat } };
@@ -803,6 +806,9 @@ public:
 			offscreen.fbufCreateInfo.layers = 6;
 
 				
+			//Shadow Sampler
+			offscreen.shadowSampler = true;
+
 
 		}
 

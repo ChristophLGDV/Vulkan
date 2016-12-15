@@ -9,6 +9,9 @@
 #include "common.hpp"
 
 class Camera {
+public:
+const	glm::mat4 vulkanCorrection = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, .5, 0), glm::vec4(0, 0, .5, 1));
+
 private:
     const float MAX_PITCH{ (float)M_PI_2 * 0.95f };
     float fov{ 60.0f };
@@ -17,8 +20,7 @@ private:
 
 
 
-	glm::mat4 vulkanCorrection = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, .5, 0), glm::vec4(0, 0, .5, 1));
-
+	
     void updateViewMatrix() {
         // Constrain pitch to ~-PI/2 to ~PI/2
         if (abs(yawPitch.y) > MAX_PITCH) {

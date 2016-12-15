@@ -10,7 +10,7 @@ namespace vkx {
 	public: 
 		const vkx::Context& context;
 		bool active{ true };
-		bool depthSampler{ false };
+		bool shadowSampler{ false };
 
 		bool defaultFramebuffer{ true };
 		vk::ImageCreateInfo colorImage;
@@ -82,7 +82,7 @@ namespace vkx {
 			sampler.magFilter = vk::Filter::eLinear;
 			sampler.minFilter = vk::Filter::eLinear;
 			sampler.mipmapMode = vk::SamplerMipmapMode::eLinear;
-			sampler.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+			sampler.addressModeU = vk::SamplerAddressMode::eClampToBorder;
 			sampler.addressModeV = sampler.addressModeU;
 			sampler.addressModeW = sampler.addressModeU;
 			sampler.mipLodBias = 0.0f;
@@ -100,7 +100,7 @@ namespace vkx {
 				}
 				if (depthAttachmentUsage | vk::ImageUsageFlagBits::eSampled) 
 				{ 
-					if (depthSampler)
+					if (shadowSampler)
 					{
 						sampler.compareEnable = true;
 						sampler.compareOp = vk::CompareOp::eLess;

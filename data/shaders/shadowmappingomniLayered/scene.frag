@@ -45,7 +45,7 @@ void main()
  
 
 	outFragColor.rgb *= max(shadow,SHADOW_OPACITY); 
+	//outFragColor = vec4(zn);
 	 
-
 
 }
