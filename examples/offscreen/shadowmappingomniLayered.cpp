@@ -144,180 +144,11 @@ public:
         uniformData.scene.destroy();
     }
 
-    void prepareCubeMap() {
-        // 32 bit float format for higher precision
-        vk::Format format = vk::Format::eR32Sfloat;
-        // Cube map image description
-        vk::ImageCreateInfo imageCreateInfo;
-        imageCreateInfo.imageType = vk::ImageType::e2D;
-        imageCreateInfo.format = format;
-        imageCreateInfo.extent.width = TEX_DIM;
-        imageCreateInfo.extent.height = TEX_DIM;
-        imageCreateInfo.extent.depth = 1;
-        imageCreateInfo.mipLevels = 1;
-        imageCreateInfo.arrayLayers = 6;
-        imageCreateInfo.samples = vk::SampleCountFlagBits::e1;
-        imageCreateInfo.tiling = vk::ImageTiling::eOptimal;
-        imageCreateInfo.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-        imageCreateInfo.sharingMode = vk::SharingMode::eExclusive;
-        imageCreateInfo.initialLayout = vk::ImageLayout::eUndefined;
-        imageCreateInfo.flags = vk::ImageCreateFlagBits::eCubeCompatible;
-
-        shadowCubeMap = createImage(imageCreateInfo, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-		shadowCubeMap.extent = { imageCreateInfo.extent.width,
-			imageCreateInfo.extent.height,
-			imageCreateInfo.extent.depth };
-
-        vk::ImageSubresourceRange subresourceRange;
-        subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        subresourceRange.baseMipLevel = 0;
-        subresourceRange.levelCount = 1;
-        subresourceRange.layerCount = 6;
-
-        // Create sampler
-        vk::SamplerCreateInfo sampler;
-        sampler.magFilter = TEX_FILTER;
-        sampler.minFilter = TEX_FILTER;
-        sampler.mipmapMode = vk::SamplerMipmapMode::eLinear;
-        sampler.addressModeU = vk::SamplerAddressMode::eClampToBorder;
-        sampler.addressModeV = sampler.addressModeU;
-        sampler.addressModeW = sampler.addressModeU;
-        sampler.mipLodBias = 0.0f;
-        sampler.maxAnisotropy = 0;
-        sampler.compareOp = vk::CompareOp::eNever;
-        sampler.minLod = 0.0f;
-        sampler.maxLod = 0.0f;
-        sampler.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-        shadowCubeMap.sampler = device.createSampler(sampler);
-
-
-        // Create image view
-        vk::ImageViewCreateInfo view;
-        view.image;
-        view.viewType = vk::ImageViewType::eCube;
-        view.format = format;
-        view.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-        view.subresourceRange.layerCount = 6;
-        view.image = shadowCubeMap.image;
-        shadowCubeMap.view = device.createImageView(view);
-    }
-
     // Updates a single cube map face
     // Renders the scene with face's view and does 
     // a copy from framebuffer to cube face
     // Uses push constants for quick update of
     // view matrix for the current cube map face
-    void updateCubeFace(uint32_t faceIndex) {
-        vk::ClearValue clearValues[2];
-        clearValues[0].color = vkx::clearColor({ .0f, 0.0f, .0f, 1.0f });
-        clearValues[1].depthStencil = { 1.0f, 0 };
-
-        vk::RenderPassBeginInfo renderPassBeginInfo;
-        // Reuse render pass from example pass
-        renderPassBeginInfo.renderPass = offscreen.renderPass;
-        renderPassBeginInfo.framebuffer = offscreen.framebuffers[0].framebuffer;
-        renderPassBeginInfo.renderArea.extent.width = offscreen.size.x;
-        renderPassBeginInfo.renderArea.extent.height = offscreen.size.y;
-        renderPassBeginInfo.clearValueCount = 2;
-        renderPassBeginInfo.pClearValues = clearValues;
-
-        // Update view matrix via push constant
-
-        glm::mat4 viewMatrix = glm::mat4();
-        switch (faceIndex) {
-        case 0: // POSITIVE_X
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 1:    // NEGATIVE_X
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 2:    // POSITIVE_Y
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 3:    // NEGATIVE_Y
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 4:    // POSITIVE_Z
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 5:    // NEGATIVE_Z
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-            break;
-        }
-
-		// Change image layout for all cubemap faces to transfer destination
-	
-
-        // Render scene from cube face's point of view
-        offscreen.cmdBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-        // Update shader push constant block
-        // Contains current face view matrix
-        offscreen.cmdBuffer.pushConstants(pipelineLayouts.offscreen,
-			vk::ShaderStageFlagBits::eVertex,
-			0,
-			sizeof(glm::mat4),
-			&viewMatrix);
-
-        offscreen.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines.offscreen);
-        offscreen.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, 
-			pipelineLayouts.offscreen, 
-			0, 
-			descriptorSets.offscreen,
-			nullptr);
-      
-		offscreen.cmdBuffer.bindVertexBuffers(VERTEX_BUFFER_BIND_ID, meshes.scene.vertices.buffer, { 0 });
-        offscreen.cmdBuffer.bindIndexBuffer(meshes.scene.indices.buffer, 0, vk::IndexType::eUint32);
-        offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
-       
-		offscreen.cmdBuffer.endRenderPass();
-
-
-		vkx::setImageLayout(
-			offscreen.cmdBuffer,
-			offscreen.framebuffers[0].colors[0].image,
-			vk::ImageAspectFlagBits::eColor,
-			vk::ImageLayout::eColorAttachmentOptimal,
-			vk::ImageLayout::eTransferSrcOptimal,
-			vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-	 
-
-
-
-        // Copy region for transfer from framebuffer to cube face
-        vk::ImageCopy copyRegion;
-        copyRegion.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-        copyRegion.srcSubresource.baseArrayLayer = 0;
-        copyRegion.srcSubresource.layerCount = 1;
-
-        copyRegion.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-        copyRegion.dstSubresource.baseArrayLayer = faceIndex;
-        copyRegion.dstSubresource.layerCount = 1;
-        copyRegion.extent = shadowCubeMap.extent;
-
-        // Put image copy into command buffer
-        offscreen.cmdBuffer.copyImage(
-			offscreen.framebuffers[0].colors[0].image,
-			vk::ImageLayout::eTransferSrcOptimal,
-			shadowCubeMap.image,
-			vk::ImageLayout::eTransferDstOptimal,
-			copyRegion);
-
-			 
-		vkx::setImageLayout(
-			offscreen.cmdBuffer,
-			offscreen.framebuffers[0].colors[0].image,
-			vk::ImageAspectFlagBits::eColor,
-			vk::ImageLayout::eTransferSrcOptimal,
-			vk::ImageLayout::eColorAttachmentOptimal,
-			vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-		
-
-		
-    }
 
     // Command buffer for rendering and copying all cube map faces
     void buildOffscreenCommandBuffer() {
@@ -827,7 +658,6 @@ public:
         loadMeshes();
         setupVertexDescriptions();
         prepareUniformBuffers();
-        prepareCubeMap();
         setupDescriptorSetLayout();
         preparePipelines();
         setupDescriptorPool();

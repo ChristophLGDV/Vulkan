@@ -22,6 +22,7 @@ namespace vkx {
         Attachment depth;
         std::vector<Attachment> colors;
 
+
         void destroy() {
             for (auto& color : colors) {
                 color.destroy();
@@ -125,7 +126,7 @@ namespace vkx {
 			vk::ImageCreateInfo colorImage,
 			vk::ImageViewCreateInfo colorView,
 			vk::ImageCreateInfo depthStencilImage,
-			vk::ImageViewCreateInfo depthStencilView,
+			std::vector<vk::ImageViewCreateInfo> depthStencilViews,
 			vk::FramebufferCreateInfo fbufCreateInfo
 		)
 		{
@@ -147,12 +148,20 @@ namespace vkx {
 			bool useDepth = depthStencilImage != vk::ImageCreateInfo();
 
 
+			std::vector<vk::ImageView> depthViews;
+
 			if (useDepth) 
 			{
 				depth = context.createImage(depthStencilImage, vk::MemoryPropertyFlagBits::eDeviceLocal);
 				 
-				depthStencilView.image = depth.image;
-				depth.view = device.createImageView(depthStencilView);
+				for (auto view : depthStencilViews)
+				{
+
+					view.image = depth.image; 
+					depthViews.push_back(device.createImageView(view));
+				} 
+
+
 
 			}
 
@@ -164,7 +173,10 @@ namespace vkx {
 			}
 			if (useDepth)
 			{
-				attachments.push_back(depth.view);
+				for (auto view : depthViews)
+				{
+					attachments.push_back(view);
+				}
 			}
 
 			fbufCreateInfo.renderPass = renderPass;

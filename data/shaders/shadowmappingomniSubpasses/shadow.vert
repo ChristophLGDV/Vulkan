@@ -5,8 +5,18 @@
 
 layout (location = 0) in vec4 inPos;
 
-layout (location = 0) out int outInstanceIndex;
+#define FACE_COUNT 6
 
+layout (binding = 0) uniform UBO 
+{
+	mat4 mvp[FACE_COUNT];
+} ubo;
+ 
+layout(push_constant) uniform PushConsts 
+{
+	uint faceID;
+} pushConsts;
+ 
 out gl_PerVertex 
 {
 	vec4 gl_Position;   
@@ -14,6 +24,5 @@ out gl_PerVertex
 
 void main()
 {
-	outInstanceIndex = gl_InstanceIndex;
-	gl_Position = inPos;
+	gl_Position = ubo.mvp[pushConsts.faceID] * inPos;
 }

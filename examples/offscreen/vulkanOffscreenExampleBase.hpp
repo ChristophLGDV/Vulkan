@@ -16,7 +16,7 @@ namespace vkx {
 		vk::ImageCreateInfo colorImage;
 		vk::ImageViewCreateInfo colorView;
 		vk::ImageCreateInfo depthStencilImage;
-		vk::ImageViewCreateInfo depthStencilView;
+		std::vector<vk::ImageViewCreateInfo> depthStencilViews;
 		vk::FramebufferCreateInfo fbufCreateInfo;
 
 
@@ -59,7 +59,8 @@ namespace vkx {
 					framebuffer.create(context, size, colorFormats, depthFormat, renderPass, attachmentUsage, depthAttachmentUsage);
 				else
 					framebuffer.create(context, size, colorFormats, depthFormat, renderPass, colorImage, colorView, 
-						depthStencilImage, depthStencilView,
+						depthStencilImage, 
+						depthStencilViews,
 						fbufCreateInfo);
 			}
 			prepareSampler();

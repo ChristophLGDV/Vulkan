@@ -14,7 +14,7 @@
 // Texture properties
 #define TEX_DIM 1024
 #define TEX_FILTER vk::Filter::eLinear
-
+#define FACE_COUNT 6
 // Offscreen frame buffer properties
 #define FB_DIM TEX_DIM
 #define FB_COLOR_FORMAT   
@@ -89,8 +89,11 @@ public:
 		vk::DescriptorSetLayout	scene;
 		vk::DescriptorSetLayout	offscreen;
 	} descriptorSetLayouts;
+	 
+//	std::array<vk::ImageView,FACE_COUNT>depthWriteViews;
 
-    vkx::Texture shadowCubeMap;
+
+
 
     //// vk::Framebuffer for offscreen rendering
     //using FrameBufferAttachment = vkx::CreateImageResult;
@@ -121,9 +124,8 @@ public:
         // Clean up used Vulkan resources 
         // Note : Inherited destructor cleans up resources stored in base class
 
-        // Cube map
-        shadowCubeMap.destroy();
-
+        // Cube map 
+		
         // Pipelibes
         device.destroyPipeline(pipelines.scene);
         device.destroyPipeline(pipelines.offscreen);
@@ -144,180 +146,7 @@ public:
         uniformData.scene.destroy();
     }
 
-    void prepareCubeMap() {
-        // 32 bit float format for higher precision
-        vk::Format format = vk::Format::eR32Sfloat;
-        // Cube map image description
-        vk::ImageCreateInfo imageCreateInfo;
-        imageCreateInfo.imageType = vk::ImageType::e2D;
-        imageCreateInfo.format = format;
-        imageCreateInfo.extent.width = TEX_DIM;
-        imageCreateInfo.extent.height = TEX_DIM;
-        imageCreateInfo.extent.depth = 1;
-        imageCreateInfo.mipLevels = 1;
-        imageCreateInfo.arrayLayers = 6;
-        imageCreateInfo.samples = vk::SampleCountFlagBits::e1;
-        imageCreateInfo.tiling = vk::ImageTiling::eOptimal;
-        imageCreateInfo.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-        imageCreateInfo.sharingMode = vk::SharingMode::eExclusive;
-        imageCreateInfo.initialLayout = vk::ImageLayout::eUndefined;
-        imageCreateInfo.flags = vk::ImageCreateFlagBits::eCubeCompatible;
-
-        shadowCubeMap = createImage(imageCreateInfo, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-		shadowCubeMap.extent = { imageCreateInfo.extent.width,
-			imageCreateInfo.extent.height,
-			imageCreateInfo.extent.depth };
-
-        vk::ImageSubresourceRange subresourceRange;
-        subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        subresourceRange.baseMipLevel = 0;
-        subresourceRange.levelCount = 1;
-        subresourceRange.layerCount = 6;
-
-        // Create sampler
-        vk::SamplerCreateInfo sampler;
-        sampler.magFilter = TEX_FILTER;
-        sampler.minFilter = TEX_FILTER;
-        sampler.mipmapMode = vk::SamplerMipmapMode::eLinear;
-        sampler.addressModeU = vk::SamplerAddressMode::eClampToBorder;
-        sampler.addressModeV = sampler.addressModeU;
-        sampler.addressModeW = sampler.addressModeU;
-        sampler.mipLodBias = 0.0f;
-        sampler.maxAnisotropy = 0;
-        sampler.compareOp = vk::CompareOp::eNever;
-        sampler.minLod = 0.0f;
-        sampler.maxLod = 0.0f;
-        sampler.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-        shadowCubeMap.sampler = device.createSampler(sampler);
-
-
-        // Create image view
-        vk::ImageViewCreateInfo view;
-        view.image;
-        view.viewType = vk::ImageViewType::eCube;
-        view.format = format;
-        view.subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-        view.subresourceRange.layerCount = 6;
-        view.image = shadowCubeMap.image;
-        shadowCubeMap.view = device.createImageView(view);
-    }
-
-    // Updates a single cube map face
-    // Renders the scene with face's view and does 
-    // a copy from framebuffer to cube face
-    // Uses push constants for quick update of
-    // view matrix for the current cube map face
-    void updateCubeFace(uint32_t faceIndex) {
-        vk::ClearValue clearValues[2];
-        clearValues[0].color = vkx::clearColor({ .0f, 0.0f, .0f, 1.0f });
-        clearValues[1].depthStencil = { 1.0f, 0 };
-
-        vk::RenderPassBeginInfo renderPassBeginInfo;
-        // Reuse render pass from example pass
-        renderPassBeginInfo.renderPass = offscreen.renderPass;
-        renderPassBeginInfo.framebuffer = offscreen.framebuffers[0].framebuffer;
-        renderPassBeginInfo.renderArea.extent.width = offscreen.size.x;
-        renderPassBeginInfo.renderArea.extent.height = offscreen.size.y;
-        renderPassBeginInfo.clearValueCount = 2;
-        renderPassBeginInfo.pClearValues = clearValues;
-
-        // Update view matrix via push constant
-
-        glm::mat4 viewMatrix = glm::mat4();
-        switch (faceIndex) {
-        case 0: // POSITIVE_X
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 1:    // NEGATIVE_X
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 2:    // POSITIVE_Y
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 3:    // NEGATIVE_Y
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 4:    // POSITIVE_Z
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            break;
-        case 5:    // NEGATIVE_Z
-            viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-            break;
-        }
-
-		// Change image layout for all cubemap faces to transfer destination
-	
-
-        // Render scene from cube face's point of view
-        offscreen.cmdBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-        // Update shader push constant block
-        // Contains current face view matrix
-        offscreen.cmdBuffer.pushConstants(pipelineLayouts.offscreen,
-			vk::ShaderStageFlagBits::eVertex,
-			0,
-			sizeof(glm::mat4),
-			&viewMatrix);
-
-        offscreen.cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelines.offscreen);
-        offscreen.cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, 
-			pipelineLayouts.offscreen, 
-			0, 
-			descriptorSets.offscreen,
-			nullptr);
-      
-		offscreen.cmdBuffer.bindVertexBuffers(VERTEX_BUFFER_BIND_ID, meshes.scene.vertices.buffer, { 0 });
-        offscreen.cmdBuffer.bindIndexBuffer(meshes.scene.indices.buffer, 0, vk::IndexType::eUint32);
-        offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
-       
-		offscreen.cmdBuffer.endRenderPass();
-
-
-		vkx::setImageLayout(
-			offscreen.cmdBuffer,
-			offscreen.framebuffers[0].colors[0].image,
-			vk::ImageAspectFlagBits::eColor,
-			vk::ImageLayout::eColorAttachmentOptimal,
-			vk::ImageLayout::eTransferSrcOptimal,
-			vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-	 
-
-
-
-        // Copy region for transfer from framebuffer to cube face
-        vk::ImageCopy copyRegion;
-        copyRegion.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-        copyRegion.srcSubresource.baseArrayLayer = 0;
-        copyRegion.srcSubresource.layerCount = 1;
-
-        copyRegion.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-        copyRegion.dstSubresource.baseArrayLayer = faceIndex;
-        copyRegion.dstSubresource.layerCount = 1;
-        copyRegion.extent = shadowCubeMap.extent;
-
-        // Put image copy into command buffer
-        offscreen.cmdBuffer.copyImage(
-			offscreen.framebuffers[0].colors[0].image,
-			vk::ImageLayout::eTransferSrcOptimal,
-			shadowCubeMap.image,
-			vk::ImageLayout::eTransferDstOptimal,
-			copyRegion);
-
-			 
-		vkx::setImageLayout(
-			offscreen.cmdBuffer,
-			offscreen.framebuffers[0].colors[0].image,
-			vk::ImageAspectFlagBits::eColor,
-			vk::ImageLayout::eTransferSrcOptimal,
-			vk::ImageLayout::eColorAttachmentOptimal,
-			vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-		
-
-		
-    }
+    
 
     // Command buffer for rendering and copying all cube map faces
     void buildOffscreenCommandBuffer() {
@@ -334,23 +163,23 @@ public:
         offscreen.cmdBuffer.setViewport(0, vkx::viewport(offscreen.size));
         offscreen.cmdBuffer.setScissor(0, vkx::rect2D(offscreen.size));
 
-       //vk::ImageSubresourceRange subresourceRange;
-       //subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-       //subresourceRange.baseMipLevel = 0;
-       //subresourceRange.levelCount = 1;
-       //subresourceRange.layerCount = 6;
+		 
 
-		vk::ClearValue clearValues[1];
-		clearValues[0].depthStencil = { 1.0f, 0 };
+		std::array<vk::ClearValue, FACE_COUNT> clearValues;
+
+		for (auto& clearValue : clearValues)
+		{
+			clearValue.depthStencil = { 1.0f, 0 };
+		} 
 
 		vk::RenderPassBeginInfo renderPassBeginInfo;
 		// Reuse render pass from example pass
 		renderPassBeginInfo.renderPass = offscreen.renderPass;
 		renderPassBeginInfo.framebuffer = offscreen.framebuffers[0].framebuffer;
 		renderPassBeginInfo.renderArea.extent.width = offscreen.size.x;
-		renderPassBeginInfo.renderArea.extent.height = offscreen.size.y;
-		renderPassBeginInfo.clearValueCount = 1;
-		renderPassBeginInfo.pClearValues = clearValues;
+		renderPassBeginInfo.renderArea.extent.height = offscreen.size.y; 
+		renderPassBeginInfo.clearValueCount = clearValues.size();
+		renderPassBeginInfo.pClearValues = clearValues.data();
 
 
 		offscreen.cmdBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
@@ -368,53 +197,30 @@ public:
 
 		offscreen.cmdBuffer.bindVertexBuffers(VERTEX_BUFFER_BIND_ID, meshes.scene.vertices.buffer, { 0 });
 		offscreen.cmdBuffer.bindIndexBuffer(meshes.scene.indices.buffer, 0, vk::IndexType::eUint32);
-		offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
 
+		for (int face = 0; face < FACE_COUNT; face++)
+		{
+
+			offscreen.cmdBuffer.pushConstants(
+				pipelineLayouts.offscreen,
+				vk::ShaderStageFlagBits::eVertex,
+				0,
+				sizeof(unsigned int),
+				&face);
+
+
+			offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
+
+
+			if (face < (FACE_COUNT - 1))
+				offscreen.cmdBuffer.nextSubpass(vk::SubpassContents::eInline);
+		}
 		offscreen.cmdBuffer.endRenderPass();
 
-
-
-        // Change image layout for all cubemap faces to transfer destination
-      //vkx::setImageLayout(
-      //    offscreen.cmdBuffer,
-      //    shadowCubeMap.image,
-      //    vk::ImageAspectFlagBits::eColor,
-      //    vk::ImageLayout::eShaderReadOnlyOptimal,
-      //    vk::ImageLayout::eTransferDstOptimal,
-      //    subresourceRange);
-
-      // for (uint32_t face = 0; face < 6; ++face) {
-      //     updateCubeFace(face); 
-      // }
-
-        // Change image layout for all cubemap faces to shader read after they have been copied
-      //  vkx::setImageLayout(
-      //      offscreen.cmdBuffer,
-      //      shadowCubeMap.image,
-      //      vk::ImageAspectFlagBits::eColor,
-      //      vk::ImageLayout::eTransferDstOptimal,
-      //      vk::ImageLayout::eShaderReadOnlyOptimal,
-      //      subresourceRange);
-
+		 
         offscreen.cmdBuffer.end();
     }
-
-    void updatePrimaryCommandBuffer(const vk::CommandBuffer& cmdBuffer) {
-        vk::ImageSubresourceRange subresourceRange;
-        subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        subresourceRange.baseMipLevel = 0;
-        subresourceRange.levelCount = 1;
-        subresourceRange.layerCount = 6;
-
-        // Change image layout for all cubemap faces to transfer destination
-        vkx::setImageLayout(
-            cmdBuffer,
-            shadowCubeMap.image,
-            vk::ImageAspectFlagBits::eColor,
-            vk::ImageLayout::eTransferDstOptimal,
-            vk::ImageLayout::eShaderReadOnlyOptimal,
-            subresourceRange);
-    }
+ 
 
     void updateDrawCommandBuffer(const vk::CommandBuffer& cmdBuffer) {
         cmdBuffer.setViewport(0, vkx::viewport(size));
@@ -532,9 +338,12 @@ public:
 				// Binding 0 : Vertex shader uniform buffer
 				vkx::descriptorSetLayoutBinding(
 					vk::DescriptorType::eUniformBuffer,
-					vk::ShaderStageFlagBits::eGeometry,
+					vk::ShaderStageFlagBits::eVertex,
 					0), 
 			};
+
+
+
 
 			vk::DescriptorSetLayoutCreateInfo descriptorLayoutInfo =
 				vkx::descriptorSetLayoutCreateInfo(setLayoutBindings.data(), setLayoutBindings.size());
@@ -543,8 +352,20 @@ public:
 
 
 
+
+			vk::PushConstantRange pushConstantRange(
+					vk::ShaderStageFlagBits::eVertex,
+					0,
+					sizeof(unsigned int));
+
+			// Push constant ranges are part of the pipeline layout
+
+
 			vk::PipelineLayoutCreateInfo pPipelineLayoutCreateInfo =
 				vkx::pipelineLayoutCreateInfo(&descriptorSetLayouts.offscreen, 1);
+
+			pPipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+			pPipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
 
 			pipelineLayouts.offscreen = device.createPipelineLayout(pPipelineLayoutCreateInfo);
 			 
@@ -683,7 +504,8 @@ public:
 	//	shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.frag.spv", vk::ShaderStageFlagBits::eFragment);
 		// Offscreen pipeline
 		shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/shadow.vert.spv", vk::ShaderStageFlagBits::eVertex);
-		shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/shadow.geom.spv", vk::ShaderStageFlagBits::eGeometry);
+		pipelineCreateInfo.stageCount = 1;
+		//shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/shadow.geom.spv", vk::ShaderStageFlagBits::eGeometry);
         rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
         pipelineCreateInfo.layout = pipelineLayouts.offscreen;
         pipelines.offscreen = device.createGraphicsPipelines(pipelineCache, pipelineCreateInfo, nullptr)[0];
@@ -722,7 +544,7 @@ public:
 
 		glm::mat4 M = glm::translate(glm::mat4(), glm::vec3(-lightPos.x, -lightPos.y, -lightPos.z));
 
-		for (uint32_t face = 0; face < 6; ++face)
+		for (uint32_t face = 0; face < FACE_COUNT; ++face)
 		{
 			glm::mat4 V;
 			switch (face)
@@ -784,7 +606,7 @@ public:
 			offscreen.depthStencilImage.extent.height = TEX_DIM;
 			offscreen.depthStencilImage.extent.depth = 1;
 			offscreen.depthStencilImage.mipLevels = 1;
-			offscreen.depthStencilImage.arrayLayers = 6; // Cubemap
+			offscreen.depthStencilImage.arrayLayers = FACE_COUNT; // Cubemap
 			offscreen.depthStencilImage.format = vkx::getSupportedDepthFormat(offscreen.context.physicalDevice);
 			offscreen.depthStencilImage.samples = vk::SampleCountFlagBits::e1;
 			offscreen.depthStencilImage.tiling = vk::ImageTiling::eOptimal;
@@ -794,11 +616,11 @@ public:
 
 			// View
 
-			offscreen.depthStencilView.viewType = vk::ImageViewType::eCube; // Cubemap			
-			offscreen.depthStencilView.format		=  vkx::getSupportedDepthFormat(offscreen.context.physicalDevice);
-			offscreen.depthStencilView.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-			offscreen.depthStencilView.subresourceRange.levelCount = 1;
-			offscreen.depthStencilView.subresourceRange.layerCount = 6; // should it not be 1?
+			//offscreen.depthStencilView.viewType = vk::ImageViewType::eCube; // Cubemap			
+			//offscreen.depthStencilView.format		=  vkx::getSupportedDepthFormat(offscreen.context.physicalDevice);
+			//offscreen.depthStencilView.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+			//offscreen.depthStencilView.subresourceRange.levelCount = 1;
+			//offscreen.depthStencilView.subresourceRange.layerCount = FACE_COUNT; // should it not be 1?
 
 			// Framebuffer 
 			offscreen.fbufCreateInfo.width = TEX_DIM;
@@ -811,23 +633,34 @@ public:
 
 
 		}
+		 
+
+		for (int face = 0; face < FACE_COUNT; face++)
+		{
+			vk::ImageViewCreateInfo depthStencilView;
+			depthStencilView.viewType = vk::ImageViewType::e2D; //_ARRAY
+			depthStencilView.format = vkx::getSupportedDepthFormat(offscreen.context.physicalDevice);
+			depthStencilView.subresourceRange = {};
+			depthStencilView.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+			depthStencilView.subresourceRange.baseMipLevel = 0;
+			depthStencilView.subresourceRange.levelCount = 1;
+			depthStencilView.subresourceRange.baseArrayLayer = face;
+			depthStencilView.subresourceRange.layerCount = 1;// FACE_COUNT - 1;
+
+			offscreen.depthStencilViews.push_back(depthStencilView);
+		}
 
 
 
+	  
 
 
+		OffscreenExampleBase::prepare();
 
 
-
-
-
-
-
-        OffscreenExampleBase::prepare();
         loadMeshes();
         setupVertexDescriptions();
-        prepareUniformBuffers();
-        prepareCubeMap();
+        prepareUniformBuffers(); 
         setupDescriptorSetLayout();
         preparePipelines();
         setupDescriptorPool();
