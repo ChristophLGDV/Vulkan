@@ -2,6 +2,8 @@
 
 #include "vulkanExampleBase.h"
 
+#define FACE_COUNT 2
+
 namespace vkx {
 
 
@@ -233,8 +235,8 @@ namespace vkx {
 		//	renderPass = context.device.createRenderPass(renderPassInfo);
 		//}
 void prepareRenderPass()
-{
-	const int FACE_COUNT = 6;
+{ 
+
 	std::array<vk::AttachmentDescription, FACE_COUNT> attchmentDescriptions;
 	for (auto& attchmentDescription : attchmentDescriptions)
 	{
@@ -254,18 +256,8 @@ void prepareRenderPass()
 	// Use subpass dependencies for layout transitions
 	std::vector<vk::SubpassDependency> subpassDependencies;
 
+	 
 
-	vk::SubpassDependency dependency;
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
-	dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-
-	dependency.dstSubpass = 0;
-	dependency.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-	dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-
-	dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-	subpassDependencies.push_back(dependency);
 	int face = 0;
 	for (; face < FACE_COUNT; face++)
 	{

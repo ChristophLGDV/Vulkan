@@ -14,7 +14,6 @@
 // Texture properties
 #define TEX_DIM 1024
 #define TEX_FILTER vk::Filter::eLinear
-#define FACE_COUNT 6
 // Offscreen frame buffer properties
 #define FB_DIM TEX_DIM
 #define FB_COLOR_FORMAT   
@@ -178,7 +177,7 @@ public:
 		renderPassBeginInfo.framebuffer = offscreen.framebuffers[0].framebuffer;
 		renderPassBeginInfo.renderArea.extent.width = offscreen.size.x;
 		renderPassBeginInfo.renderArea.extent.height = offscreen.size.y; 
-		renderPassBeginInfo.clearValueCount = clearValues.size();
+		renderPassBeginInfo.clearValueCount = 0; clearValues.size();
 		renderPassBeginInfo.pClearValues = clearValues.data();
 
 
@@ -198,23 +197,23 @@ public:
 		offscreen.cmdBuffer.bindVertexBuffers(VERTEX_BUFFER_BIND_ID, meshes.scene.vertices.buffer, { 0 });
 		offscreen.cmdBuffer.bindIndexBuffer(meshes.scene.indices.buffer, 0, vk::IndexType::eUint32);
 
-		for (int face = 0; face < FACE_COUNT; face++)
-		{
-
-			offscreen.cmdBuffer.pushConstants(
-				pipelineLayouts.offscreen,
-				vk::ShaderStageFlagBits::eVertex,
-				0,
-				sizeof(unsigned int),
-				&face);
-
-
-			offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
-
-
-			if (face < (FACE_COUNT - 1))
-				offscreen.cmdBuffer.nextSubpass(vk::SubpassContents::eInline);
-		}
+	 for (int face = 0; face < FACE_COUNT; face++)
+	 { 
+	 
+		offscreen.cmdBuffer.pushConstants(
+			pipelineLayouts.offscreen,
+			vk::ShaderStageFlagBits::eVertex,
+			0,
+			sizeof(unsigned int),
+			&face);
+	 
+	 
+	 	offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
+	 
+	 
+	 	if (face < (FACE_COUNT - 1))
+	 		offscreen.cmdBuffer.nextSubpass(vk::SubpassContents::eInline);
+	 }
 		offscreen.cmdBuffer.endRenderPass();
 
 		 
@@ -472,8 +471,8 @@ public:
         // Load shaders
         std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages;
 
-        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
-        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
+        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniSubpasses/scene.vert.spv", vk::ShaderStageFlagBits::eVertex);
+        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniSubpasses/scene.frag.spv", vk::ShaderStageFlagBits::eFragment);
 
         vk::GraphicsPipelineCreateInfo pipelineCreateInfo =
             vkx::pipelineCreateInfo(pipelineLayouts.scene, renderPass);
@@ -493,8 +492,8 @@ public:
 
 
         // Cube map display pipeline
-        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/cubemapdisplay.vert.spv", vk::ShaderStageFlagBits::eVertex);
-        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/cubemapdisplay.frag.spv", vk::ShaderStageFlagBits::eFragment);
+        shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniSubpasses/cubemapdisplay.vert.spv", vk::ShaderStageFlagBits::eVertex);
+        shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniSubpasses/cubemapdisplay.frag.spv", vk::ShaderStageFlagBits::eFragment);
         rasterizationState.cullMode = vk::CullModeFlagBits::eFront;
         pipelines.cubeMap = device.createGraphicsPipelines(pipelineCache, pipelineCreateInfo, nullptr)[0];
 
@@ -503,7 +502,7 @@ public:
 	//	shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.vert.spv", vk::ShaderStageFlagBits::eVertex);
 	//	shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomni/offscreen.frag.spv", vk::ShaderStageFlagBits::eFragment);
 		// Offscreen pipeline
-		shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/shadow.vert.spv", vk::ShaderStageFlagBits::eVertex);
+		shaderStages[0] = loadShader(getAssetPath() + "shaders/shadowmappingomniSubpasses/shadow.vert.spv", vk::ShaderStageFlagBits::eVertex);
 		pipelineCreateInfo.stageCount = 1;
 		//shaderStages[1] = loadShader(getAssetPath() + "shaders/shadowmappingomniLayered/shadow.geom.spv", vk::ShaderStageFlagBits::eGeometry);
         rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
@@ -606,7 +605,7 @@ public:
 			offscreen.depthStencilImage.extent.height = TEX_DIM;
 			offscreen.depthStencilImage.extent.depth = 1;
 			offscreen.depthStencilImage.mipLevels = 1;
-			offscreen.depthStencilImage.arrayLayers = FACE_COUNT; // Cubemap
+			offscreen.depthStencilImage.arrayLayers = 6; // Cubemap
 			offscreen.depthStencilImage.format = vkx::getSupportedDepthFormat(offscreen.context.physicalDevice);
 			offscreen.depthStencilImage.samples = vk::SampleCountFlagBits::e1;
 			offscreen.depthStencilImage.tiling = vk::ImageTiling::eOptimal;
