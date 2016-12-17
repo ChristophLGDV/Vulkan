@@ -177,8 +177,8 @@ public:
 		renderPassBeginInfo.framebuffer = offscreen.framebuffers[0].framebuffer;
 		renderPassBeginInfo.renderArea.extent.width = offscreen.size.x;
 		renderPassBeginInfo.renderArea.extent.height = offscreen.size.y; 
-		renderPassBeginInfo.clearValueCount = 0; clearValues.size();
-		renderPassBeginInfo.pClearValues = clearValues.data();
+	//renderPassBeginInfo.clearValueCount = 0; clearValues.size();
+	//renderPassBeginInfo.pClearValues = clearValues.data();
 
 
 		offscreen.cmdBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
@@ -200,7 +200,20 @@ public:
 	 for (int face = 0; face < FACE_COUNT; face++)
 	 { 
 	 
-		offscreen.cmdBuffer.pushConstants(
+
+		 vk::ClearAttachment clearAttachment;
+		 clearAttachment.aspectMask = vk::ImageAspectFlagBits::eDepth;
+		 clearAttachment.clearValue.setDepthStencil( vk::ClearDepthStencilValue(1.0f, 0) );
+
+		 vk::ClearRect rect;
+		 rect.baseArrayLayer = face;
+		 rect.layerCount = 1;
+		 rect.rect = VkRect2D{ { 0,0 },{ TEX_DIM ,TEX_DIM } };
+		 
+		 offscreen.cmdBuffer.clearAttachments( 1, &clearAttachment, 1, &rect);
+
+
+		 offscreen.cmdBuffer.pushConstants(
 			pipelineLayouts.offscreen,
 			vk::ShaderStageFlagBits::eVertex,
 			0,
@@ -211,8 +224,8 @@ public:
 	 	offscreen.cmdBuffer.drawIndexed(meshes.scene.indexCount, 1, 0, 0, 0);
 	 
 	 
-	 	if (face < (FACE_COUNT - 1))
-	 		offscreen.cmdBuffer.nextSubpass(vk::SubpassContents::eInline);
+	 if (face < (FACE_COUNT - 1))
+	 	offscreen.cmdBuffer.nextSubpass(vk::SubpassContents::eInline);
 	 }
 		offscreen.cmdBuffer.endRenderPass();
 

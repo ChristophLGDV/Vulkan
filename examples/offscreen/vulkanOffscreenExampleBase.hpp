@@ -242,7 +242,7 @@ void prepareRenderPass()
 	{
 		attchmentDescription.format = vkx::getSupportedDepthFormat(context.physicalDevice);
 		attchmentDescription.samples = vk::SampleCountFlagBits::e1;
-		attchmentDescription.loadOp = vk::AttachmentLoadOp::eClear;// VK_ATTACHMENT_LOAD_OP_CLEAR;						// Clear depth at beginning of the render pass
+		attchmentDescription.loadOp = vk::AttachmentLoadOp::eDontCare;// VK_ATTACHMENT_LOAD_OP_CLEAR;						// Clear depth at beginning of the render pass
 		attchmentDescription.storeOp = vk::AttachmentStoreOp::eStore;					// We will read from depth, so it's important to store the depth attachment results
 
 		attchmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
@@ -266,7 +266,7 @@ void prepareRenderPass()
 		depthReference.attachment = face;
 		depthReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;		// Attachment will be used as depth/stencil during render pass
 
-		vk::SubpassDescription subpass = {};
+		vk::SubpassDescription subpass;
 		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		subpass.colorAttachmentCount = 0;												// No color attachments
 		subpass.pDepthStencilAttachment = &depthReference;
