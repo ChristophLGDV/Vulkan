@@ -125,7 +125,8 @@ namespace vkx {
 			const vk::RenderPass& renderPass,
 			vk::ImageCreateInfo colorImage,
 			vk::ImageViewCreateInfo colorView,
-			vk::ImageCreateInfo depthStencilImage,
+			vk::ImageCreateInfo depthStencilImage, 
+			vk::ImageViewCreateInfo depthStencilView,
 			std::vector<vk::ImageViewCreateInfo> depthStencilViews,
 			vk::FramebufferCreateInfo fbufCreateInfo
 		)
@@ -154,12 +155,17 @@ namespace vkx {
 			{
 				depth = context.createImage(depthStencilImage, vk::MemoryPropertyFlagBits::eDeviceLocal);
 				 
+				// many views for subsequent writing to layered texture
 				for (auto view : depthStencilViews)
 				{
 
 					view.image = depth.image; 
 					depthViews.push_back(device.createImageView(view));
 				} 
+
+
+				depthStencilView.image = depth.image;
+				depth.view = device.createImageView(depthStencilView);
 
 
 

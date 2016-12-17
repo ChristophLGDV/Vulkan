@@ -283,7 +283,7 @@ public:
         std::vector<vk::DescriptorPoolSize> poolSizes =
         {
             vkx::descriptorPoolSize(vk::DescriptorType::eUniformBuffer, 3),
-            vkx::descriptorPoolSize(vk::DescriptorType::eCombinedImageSampler, 2)
+			vkx::descriptorPoolSize(vk::DescriptorType::eCombinedImageSampler, 2)
         };
 
         vk::DescriptorPoolCreateInfo descriptorPoolInfo =
@@ -616,16 +616,16 @@ public:
 
 			// View
 
-			//offscreen.depthStencilView.viewType = vk::ImageViewType::eCube; // Cubemap			
-			//offscreen.depthStencilView.format		=  vkx::getSupportedDepthFormat(offscreen.context.physicalDevice);
-			//offscreen.depthStencilView.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-			//offscreen.depthStencilView.subresourceRange.levelCount = 1;
-			//offscreen.depthStencilView.subresourceRange.layerCount = FACE_COUNT; // should it not be 1?
+			offscreen.depthStencilView.viewType = vk::ImageViewType::eCube; // Cubemap			
+			offscreen.depthStencilView.format		=  vkx::getSupportedDepthFormat(offscreen.context.physicalDevice);
+			offscreen.depthStencilView.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+			offscreen.depthStencilView.subresourceRange.levelCount = 1;
+			offscreen.depthStencilView.subresourceRange.layerCount = FACE_COUNT; // view for cube sampler
 
 			// Framebuffer 
 			offscreen.fbufCreateInfo.width = TEX_DIM;
 			offscreen.fbufCreateInfo.height = TEX_DIM;
-			offscreen.fbufCreateInfo.layers = 6;
+			offscreen.fbufCreateInfo.layers = 1;
 
 				
 			//Shadow Sampler
@@ -669,6 +669,9 @@ public:
         buildOffscreenCommandBuffer();
         prepared = true;
     }
+
+
+	
 
     virtual void render() {
         if (!prepared)

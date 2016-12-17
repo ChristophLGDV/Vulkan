@@ -16,6 +16,7 @@ namespace vkx {
 		vk::ImageCreateInfo colorImage;
 		vk::ImageViewCreateInfo colorView;
 		vk::ImageCreateInfo depthStencilImage;
+		vk::ImageViewCreateInfo depthStencilView;
 		std::vector<vk::ImageViewCreateInfo> depthStencilViews;
 		vk::FramebufferCreateInfo fbufCreateInfo;
 
@@ -59,7 +60,8 @@ namespace vkx {
 					framebuffer.create(context, size, colorFormats, depthFormat, renderPass, attachmentUsage, depthAttachmentUsage);
 				else
 					framebuffer.create(context, size, colorFormats, depthFormat, renderPass, colorImage, colorView, 
-						depthStencilImage, 
+						depthStencilImage,
+						depthStencilView,
 						depthStencilViews,
 						fbufCreateInfo);
 			}
@@ -114,122 +116,231 @@ namespace vkx {
 			}
 		}
 
-		virtual void prepareRenderPass() 
-		{
-			vk::SubpassDescription subpass;
-			subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		//virtual void prepareRenderPass() 
+		//{
+		//	vk::SubpassDescription subpass;
+		//	subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		//
+		//	std::vector<vk::AttachmentDescription> attachments;
+		//	std::vector<vk::AttachmentReference> colorAttachmentReferences;
+		//	attachments.resize(colorFormats.size());
+		//	colorAttachmentReferences.resize(attachments.size());
+		//	// Color attachment
+		//	for (size_t i = 0; i < attachments.size(); ++i) {
+		//		attachments[i].format = colorFormats[i];
+		//		attachments[i].loadOp = vk::AttachmentLoadOp::eClear;
+		//		attachments[i].storeOp = colorFinalLayout == vk::ImageLayout::eUndefined ? vk::AttachmentStoreOp::eDontCare : vk::AttachmentStoreOp::eStore;
+		//		attachments[i].initialLayout = vk::ImageLayout::eUndefined;
+		//		attachments[i].finalLayout = colorFinalLayout;
+		//
+		//		vk::AttachmentReference& attachmentReference = colorAttachmentReferences[i];
+		//		attachmentReference.attachment = i;
+		//		attachmentReference.layout = vk::ImageLayout::eColorAttachmentOptimal;
+		//
+		//		subpass.colorAttachmentCount = colorAttachmentReferences.size();
+		//		subpass.pColorAttachments = colorAttachmentReferences.data();
+		//	}
+		//
+		//	// Do we have a depth format?
+		//	vk::AttachmentReference depthAttachmentReference;
+		//	if (depthFormat != vk::Format::eUndefined) {
+		//		vk::AttachmentDescription depthAttachment;
+		//		depthAttachment.format = depthFormat;
+		//		depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+		//		// We might be using the depth attacment for something, so preserve it if it's final layout is not undefined
+		//		depthAttachment.storeOp = depthFinalLayout == vk::ImageLayout::eUndefined ? vk::AttachmentStoreOp::eDontCare : vk::AttachmentStoreOp::eStore;
+		//		depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
+		//		depthAttachment.finalLayout = depthFinalLayout;
+		//		attachments.push_back(depthAttachment);
+		//		depthAttachmentReference.attachment = attachments.size() - 1;
+		//		depthAttachmentReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+		//		subpass.pDepthStencilAttachment = &depthAttachmentReference;
+		//	}
+		//
+		//	std::vector<vk::SubpassDependency> subpassDependencies;
+		//	{
+		//		//if ((colorFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) &&
+		//		//	(colorFinalLayout != vk::ImageLayout::eUndefined)) {
+		//		//	// Implicit transition 
+		//		//	vk::SubpassDependency dependency;
+		//		//	dependency.srcSubpass = 0;
+		//		//	dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+		//		//	dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		//		//
+		//		//	dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+		//		//	dependency.dstAccessMask = vkx::accessFlagsForLayout(colorFinalLayout);
+		//		//	dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+		//		//	subpassDependencies.push_back(dependency);
+		//		//}
+		//		//
+		//		//if ((depthFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) && 
+		//		//	(depthFinalLayout != vk::ImageLayout::eUndefined)) {
+		//		//	// Implicit transition 
+		//		//	vk::SubpassDependency dependency;
+		//		//	dependency.srcSubpass = 0;
+		//		//	dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		//		//	dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+		//		//
+		//		//	dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+		//		//	dependency.dstAccessMask = vkx::accessFlagsForLayout(depthFinalLayout);
+		//		//	dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+		//		//	subpassDependencies.push_back(dependency);
+		//		//}
+		//	
+		//		{
+		//			// Implicit transition 
+		//			vk::SubpassDependency dependency;
+		//			dependency.srcSubpass	= VK_SUBPASS_EXTERNAL;
+		//			dependency.srcAccessMask= vk::AccessFlagBits::eMemoryRead;
+		//			dependency.srcStageMask	= vk::PipelineStageFlagBits::eBottomOfPipe ;
+		//		
+		//			dependency.dstSubpass	= 0;
+		//			dependency.dstAccessMask= vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		//			dependency.dstStageMask	= vk::PipelineStageFlagBits::eColorAttachmentOutput; 
+		//			
+		//			dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+		//			subpassDependencies.push_back(dependency);
+		//		}
+		//		 
+		//		{
+		//			// Implicit transition 
+		//			vk::SubpassDependency dependency;
+		//			dependency.srcSubpass	= 0;
+		//			dependency.srcAccessMask= vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		//			dependency.srcStageMask	= vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		//											 
+		//			dependency.dstSubpass	= VK_SUBPASS_EXTERNAL;
+		//			dependency.dstAccessMask= vk::AccessFlagBits::eMemoryRead;
+		//			dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+		//
+		//			dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+		//			subpassDependencies.push_back(dependency);
+		//		}
+		//
+		//	}
+		//
+		//	if (renderPass) {
+		//		context.device.destroyRenderPass(renderPass);
+		//	}
+		//
+		//	vk::RenderPassCreateInfo renderPassInfo;
+		//	renderPassInfo.attachmentCount = attachments.size();
+		//	renderPassInfo.pAttachments = attachments.data();
+		//	renderPassInfo.subpassCount = 1;
+		//	renderPassInfo.pSubpasses = &subpass;
+		//	renderPassInfo.dependencyCount = subpassDependencies.size();
+		//	renderPassInfo.pDependencies = subpassDependencies.data();
+		//	renderPass = context.device.createRenderPass(renderPassInfo);
+		//}
+void prepareRenderPass()
+{
+	const int FACE_COUNT = 6;
+	std::array<vk::AttachmentDescription, FACE_COUNT> attchmentDescriptions;
+	for (auto& attchmentDescription : attchmentDescriptions)
+	{
+		attchmentDescription.format = vkx::getSupportedDepthFormat(context.physicalDevice);
+		attchmentDescription.samples = vk::SampleCountFlagBits::e1;
+		attchmentDescription.loadOp = vk::AttachmentLoadOp::eClear;// VK_ATTACHMENT_LOAD_OP_CLEAR;						// Clear depth at beginning of the render pass
+		attchmentDescription.storeOp = vk::AttachmentStoreOp::eStore;					// We will read from depth, so it's important to store the depth attachment results
 
-			std::vector<vk::AttachmentDescription> attachments;
-			std::vector<vk::AttachmentReference> colorAttachmentReferences;
-			attachments.resize(colorFormats.size());
-			colorAttachmentReferences.resize(attachments.size());
-			// Color attachment
-			for (size_t i = 0; i < attachments.size(); ++i) {
-				attachments[i].format = colorFormats[i];
-				attachments[i].loadOp = vk::AttachmentLoadOp::eClear;
-				attachments[i].storeOp = colorFinalLayout == vk::ImageLayout::eUndefined ? vk::AttachmentStoreOp::eDontCare : vk::AttachmentStoreOp::eStore;
-				attachments[i].initialLayout = vk::ImageLayout::eUndefined;
-				attachments[i].finalLayout = colorFinalLayout;
+		attchmentDescription.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+		attchmentDescription.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+		attchmentDescription.initialLayout = vk::ImageLayout::eUndefined;// VK_IMAGE_LAYOUT_UNDEFINED;					// We don't care about initial layout of the attachment
+		attchmentDescription.finalLayout = depthFinalLayout;//VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ;	// Attachment will be transitioned to shader read at render pass end
+		attchmentDescription.flags = {};
+	}
 
-				vk::AttachmentReference& attachmentReference = colorAttachmentReferences[i];
-				attachmentReference.attachment = i;
-				attachmentReference.layout = vk::ImageLayout::eColorAttachmentOptimal;
+	std::vector<vk::SubpassDescription> subpasses;
+	// Use subpass dependencies for layout transitions
+	std::vector<vk::SubpassDependency> subpassDependencies;
 
-				subpass.colorAttachmentCount = colorAttachmentReferences.size();
-				subpass.pColorAttachments = colorAttachmentReferences.data();
-			}
 
-			// Do we have a depth format?
-			vk::AttachmentReference depthAttachmentReference;
-			if (depthFormat != vk::Format::eUndefined) {
-				vk::AttachmentDescription depthAttachment;
-				depthAttachment.format = depthFormat;
-				depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-				// We might be using the depth attacment for something, so preserve it if it's final layout is not undefined
-				depthAttachment.storeOp = depthFinalLayout == vk::ImageLayout::eUndefined ? vk::AttachmentStoreOp::eDontCare : vk::AttachmentStoreOp::eStore;
-				depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
-				depthAttachment.finalLayout = depthFinalLayout;
-				attachments.push_back(depthAttachment);
-				depthAttachmentReference.attachment = attachments.size() - 1;
-				depthAttachmentReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-				subpass.pDepthStencilAttachment = &depthAttachmentReference;
-			}
+	vk::SubpassDependency dependency;
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
+	dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
 
-			std::vector<vk::SubpassDependency> subpassDependencies;
-			{
-				//if ((colorFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) &&
-				//	(colorFinalLayout != vk::ImageLayout::eUndefined)) {
-				//	// Implicit transition 
-				//	vk::SubpassDependency dependency;
-				//	dependency.srcSubpass = 0;
-				//	dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-				//	dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-				//
-				//	dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-				//	dependency.dstAccessMask = vkx::accessFlagsForLayout(colorFinalLayout);
-				//	dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-				//	subpassDependencies.push_back(dependency);
-				//}
-				//
-				//if ((depthFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) && 
-				//	(depthFinalLayout != vk::ImageLayout::eUndefined)) {
-				//	// Implicit transition 
-				//	vk::SubpassDependency dependency;
-				//	dependency.srcSubpass = 0;
-				//	dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-				//	dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-				//
-				//	dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-				//	dependency.dstAccessMask = vkx::accessFlagsForLayout(depthFinalLayout);
-				//	dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-				//	subpassDependencies.push_back(dependency);
-				//}
-			
-				{
-					// Implicit transition 
-					vk::SubpassDependency dependency;
-					dependency.srcSubpass	= VK_SUBPASS_EXTERNAL;
-					dependency.srcAccessMask= vk::AccessFlagBits::eMemoryRead;
-					dependency.srcStageMask	= vk::PipelineStageFlagBits::eBottomOfPipe ;
-				
-					dependency.dstSubpass	= 0;
-					dependency.dstAccessMask= vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-					dependency.dstStageMask	= vk::PipelineStageFlagBits::eColorAttachmentOutput; 
-					
-					dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-					subpassDependencies.push_back(dependency);
-				}
-				 
-				{
-					// Implicit transition 
-					vk::SubpassDependency dependency;
-					dependency.srcSubpass	= 0;
-					dependency.srcAccessMask= vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-					dependency.srcStageMask	= vk::PipelineStageFlagBits::eColorAttachmentOutput;
-													 
-					dependency.dstSubpass	= VK_SUBPASS_EXTERNAL;
-					dependency.dstAccessMask= vk::AccessFlagBits::eMemoryRead;
-					dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+	dependency.dstSubpass = 0;
+	dependency.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+	dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 
-					dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-					subpassDependencies.push_back(dependency);
-				}
+	dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+	subpassDependencies.push_back(dependency);
+	int face = 0;
+	for (; face < FACE_COUNT; face++)
+	{
 
-			}
+		vk::AttachmentReference depthReference = {};
+		depthReference.attachment = face;
+		depthReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;		// Attachment will be used as depth/stencil during render pass
 
-			if (renderPass) {
-				context.device.destroyRenderPass(renderPass);
-			}
+		vk::SubpassDescription subpass = {};
+		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		subpass.colorAttachmentCount = 0;												// No color attachments
+		subpass.pDepthStencilAttachment = &depthReference;
+		subpasses.push_back(subpass);
 
-			vk::RenderPassCreateInfo renderPassInfo;
-			renderPassInfo.attachmentCount = attachments.size();
-			renderPassInfo.pAttachments = attachments.data();
-			renderPassInfo.subpassCount = 1;
-			renderPassInfo.pSubpasses = &subpass;
-			renderPassInfo.dependencyCount = subpassDependencies.size();
-			renderPassInfo.pDependencies = subpassDependencies.data();
-			renderPass = context.device.createRenderPass(renderPassInfo);
-		}
+		vk::SubpassDependency dependency;
+		dependency.srcSubpass = face;
+		dependency.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
+		dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+
+		dependency.dstSubpass = face;
+		dependency.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
+		dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+		subpassDependencies.push_back(dependency);
+
+
+	}
+
+	{
+		// Implicit transition 
+		vk::SubpassDependency dependency;
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
+		dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+
+		dependency.dstSubpass = 0;
+		dependency.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
+		dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+		subpassDependencies.push_back(dependency);
+	}
+
+	{
+		// Implicit transition 
+		vk::SubpassDependency dependency;
+		dependency.srcSubpass = face;
+		dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
+		dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+		dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+
+		dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+		subpassDependencies.push_back(dependency);
+	}
+
+
+
+	if (renderPass) {
+		context.device.destroyRenderPass(renderPass);
+	}
+
+	vk::RenderPassCreateInfo renderPassInfo;
+	renderPassInfo.attachmentCount = attchmentDescriptions.size();
+	renderPassInfo.pAttachments = attchmentDescriptions.data();
+	renderPassInfo.subpassCount = subpasses.size();
+	renderPassInfo.pSubpasses = subpasses.data();
+	renderPassInfo.dependencyCount = subpassDependencies.size();
+	renderPassInfo.pDependencies = subpassDependencies.data();
+	renderPass = context.device.createRenderPass(renderPassInfo);
+
+}
 	} ;
 
 
