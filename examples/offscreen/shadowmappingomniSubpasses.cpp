@@ -116,7 +116,7 @@ public:
 		camera.setRotation(glm::vec3(5.0f, 0.0f, 0.0f));
 		camera.setPerspective(90.0f, size, 0.1f, 256.0f);
 		camera.setZoom(-75.0f);
-        title = "Vulkan Example - Point light shadows - Layered Rendering";
+        title = "Vulkan Example - Point light shadows - Subpass  Rendering";
     }
 
     ~VulkanExample() {
@@ -166,10 +166,8 @@ public:
 
 		std::array<vk::ClearValue, FACE_COUNT> clearValues;
 
-		for (auto& clearValue : clearValues)
-		{
-			clearValue.depthStencil = { 1.0f, 0 };
-		} 
+		for (auto& clearValue : clearValues) 
+			clearValue.depthStencil = { 1.0f, 0 }; 
 
 		vk::RenderPassBeginInfo renderPassBeginInfo;
 		// Reuse render pass from example pass

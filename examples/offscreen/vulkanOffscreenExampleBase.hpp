@@ -253,13 +253,8 @@ void prepareRenderPass()
 	}
 
 	std::vector<vk::SubpassDescription> subpasses;
-	// Use subpass dependencies for layout transitions
-	std::vector<vk::SubpassDependency> subpassDependencies;
 
-	 
-
-	int face = 0;
-	for (; face < FACE_COUNT; face++)
+	for (int face = 0; face < FACE_COUNT; face++)
 	{
 
 		vk::AttachmentReference depthReference = {};
@@ -271,21 +266,11 @@ void prepareRenderPass()
 		subpass.colorAttachmentCount = 0;												// No color attachments
 		subpass.pDepthStencilAttachment = &depthReference;
 		subpasses.push_back(subpass);
-
-		vk::SubpassDependency dependency;
-		dependency.srcSubpass = face;
-		dependency.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
-		dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-
-		dependency.dstSubpass = face;
-		dependency.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-
-		dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
-		subpassDependencies.push_back(dependency);
-
-
 	}
+
+
+	// Use subpass dependencies for layout transitions
+	std::vector<vk::SubpassDependency> subpassDependencies;
 
 	{
 		// Implicit transition 
@@ -295,27 +280,60 @@ void prepareRenderPass()
 		dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
 
 		dependency.dstSubpass = 0;
-		dependency.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead;
+		dependency.dstStageMask = vk::PipelineStageFlagBits::eLateFragmentTests;
 
 		dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
 		subpassDependencies.push_back(dependency);
+	}
+	 
+	for (int face = 1; face < FACE_COUNT; face++)
+	{ 
+
+		vk::SubpassDependency dependency;
+		dependency.srcSubpass = face-1;
+		dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		dependency.srcStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests;
+
+		dependency.dstSubpass = face;
+		dependency.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead ;
+		dependency.dstStageMask = vk::PipelineStageFlagBits::eLateFragmentTests;
+
+		dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+		subpassDependencies.push_back(dependency);
+
+
 	}
 
 	{
 		// Implicit transition 
 		vk::SubpassDependency dependency;
-		dependency.srcSubpass = face;
-		dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency.srcSubpass = FACE_COUNT-1;
+		dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
 
 		dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
-		dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+		dependency.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead ;
+		dependency.dstStageMask = vk::PipelineStageFlagBits::eLateFragmentTests;
 
 		dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
 		subpassDependencies.push_back(dependency);
 	}
+
+	//{
+	//	// Implicit transition 
+	//	vk::SubpassDependency dependency;
+	//	dependency.srcSubpass = face;
+	//	dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+	//	dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+	//
+	//	dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+	//	dependency.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+	//	dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+	//
+	//	dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+	//	subpassDependencies.push_back(dependency);
+	//}
 
 
 

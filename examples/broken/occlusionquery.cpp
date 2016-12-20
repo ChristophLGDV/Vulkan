@@ -132,7 +132,7 @@ public:
         queryPoolInfo.queryType = vk::QueryType::eOcclusion;
         queryPoolInfo.queryCount = 2;
 
-        queryPool = device.createQueryPool(queryPoolInfo, NULL);
+        queryPool = device.createQueryPool(queryPoolInfo, nullptr);
     }
 
     // Retrieves the results of the occlusion queries submitted to the command buffer

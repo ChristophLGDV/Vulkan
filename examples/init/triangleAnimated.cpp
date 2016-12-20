@@ -183,7 +183,7 @@ public:
         descriptorLayout.bindingCount = 1;
         descriptorLayout.pBindings = &layoutBinding;
 
-        descriptorSetLayout = device.createDescriptorSetLayout(descriptorLayout, NULL);
+        descriptorSetLayout = device.createDescriptorSetLayout(descriptorLayout, nullptr);
 
         // Create the pipeline layout that is used to generate the rendering pipelines that
         // are based on this descriptor set layout
